@@ -14,7 +14,7 @@ RUN dotnet publish src/Infocal.Scraper/Infocal.Scraper.csproj -c Release -o /app
 FROM mcr.microsoft.com/dotnet/runtime:10.0
 WORKDIR /app
 
-# Persist dedup state
+# Volume for future state persistence
 VOLUME /app/data
 
 ENV DOTNET_ENVIRONMENT=Production
