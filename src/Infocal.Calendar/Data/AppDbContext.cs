@@ -1,0 +1,36 @@
+using Infocal.Calendar.Models;
+using Microsoft.EntityFrameworkCore;
+
+namespace Infocal.Calendar.Data;
+
+public class AppDbContext : DbContext
+{
+    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
+
+    public DbSet<EventItem> Events => Set<EventItem>();
+    public DbSet<CategoryEntity> Categories => Set<CategoryEntity>();
+    public DbSet<CityEntity> Cities => Set<CityEntity>();
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<EventItem>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.Start);
+            e.HasIndex(x => x.Category);
+            e.HasIndex(x => x.City);
+            e.HasIndex(x => new { x.City, x.Category });
+            e.HasIndex(x => x.SourceUrl);
+        });
+
+        modelBuilder.Entity<CategoryEntity>(e =>
+        {
+            e.HasKey(x => x.Slug);
+        });
+
+        modelBuilder.Entity<CityEntity>(e =>
+        {
+            e.HasKey(x => x.Slug);
+        });
+    }
+}

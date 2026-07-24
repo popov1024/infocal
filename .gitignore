@@ -1,0 +1,28 @@
+# .NET
+**/bin/
+**/obj/
+*.user
+*.suo
+*.DotSettings
+
+# SQLite
+*.db
+*.db-shm
+*.db-wal
+
+# Scraper state
+last_scrape.txt
+
+# IDE
+.idea/
+.vs/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+# (volumes handled by docker, not committed)

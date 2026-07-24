@@ -1,0 +1,33 @@
+services:
+  calendar:
+    build:
+      context: .
+      dockerfile: src/Infocal.Calendar/Dockerfile
+    container_name: infocal-calendar
+    restart: unless-stopped
+    ports:
+      - "5253:80"
+    volumes:
+      - calendar-data:/app/data
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ApiKey=CHANGE-ME-in-production
+
+  scraper:
+    build:
+      context: .
+      dockerfile: src/Infocal.Scraper/Dockerfile
+    container_name: infocal-scraper
+    restart: unless-stopped
+    volumes:
+      - scraper-data:/app/data
+    environment:
+      - DOTNET_ENVIRONMENT=Production
+      - CalendarApi__BaseUrl=http://calendar
+      - CalendarApi__ApiKey=CHANGE-ME-in-production
+    depends_on:
+      - calendar
+
+volumes:
+  calendar-data:
+  scraper-data:

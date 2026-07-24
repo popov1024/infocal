@@ -1,0 +1,6 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Infocal.Calendar/Infocal.Calendar.csproj" />
+    <Project Path="src/Infocal.Scraper/Infocal.Scraper.csproj" />
+  </Folder>
+</Solution>
