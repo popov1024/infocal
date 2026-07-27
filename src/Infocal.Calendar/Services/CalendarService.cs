@@ -37,7 +37,9 @@ public class CalendarService
                 Uid = ev.Id.ToString(),
                 Summary = ev.Description,
                 Description = ev.Location,
-                Location = ev.CityDescription ?? ev.City,
+                Location = ev.CityDescription != null && ev.Address != null
+                    ? $"{ev.CityDescription}, {ev.Address}"
+                    : ev.CityDescription ?? ev.Address ?? "",
                 DtStamp = new CalDateTime(DateTime.UtcNow)
             };
 

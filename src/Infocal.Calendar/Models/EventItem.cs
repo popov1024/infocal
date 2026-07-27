@@ -9,7 +9,8 @@ public class EventItem
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public string Description { get; set; } = "";
-    public string? Location { get; set; }
+    public string Location { get; set; } = "";
+    public string Address { get; set; } = "";
     public string Category { get; set; } = "";
     public string CategoryDescription { get; set; } = "";
     public string City { get; set; } = "";

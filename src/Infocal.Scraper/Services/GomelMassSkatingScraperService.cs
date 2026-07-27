@@ -112,7 +112,8 @@ public class GomelMassSkatingScraperService
                         Title = "Массовое катание",
                         Start = date + start,
                         End = date + end,
-                        Location = "Ледовый дворец, Гомель, ул. Мазурова, 110",
+                        Location = "Ледовый дворец",
+                        Address = "ул. Мазурова, 110",
                         City = "Гомель",
                         Category = "Массовое катание",
                         SourceUrl = url

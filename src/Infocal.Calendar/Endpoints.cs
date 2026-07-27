@@ -141,8 +141,11 @@ public static class Endpoints
         sb.AppendLine("code { background: #e8e8e8; padding: 2px 6px; border-radius: 4px; font-size: 0.9rem; word-break: break-all; }");
         sb.AppendLine(".steps { padding-left: 1.2rem; }");
         sb.AppendLine(".steps li { margin-bottom: 0.3rem; }");
-        sb.AppendLine(".copy-btn { background: none; color: #888; border: none; padding: 0.2rem; cursor: pointer; border-radius: 4px; }");
+        sb.AppendLine(".copy-btn { background: none; color: #888; border: none; padding: 0.2rem; cursor: pointer; border-radius: 4px; float: right; margin-left: 0.5rem; }");
         sb.AppendLine(".copy-btn:hover { color: #1565C0; background: #e8e8e8; }");
+        sb.AppendLine(".url-box { background: #e8e8e8; border-radius: 4px; font-size: 0.8rem;");
+        sb.AppendLine("        padding: 0.4rem 0.6rem; word-break: break-all; overflow: hidden; }");
+        sb.AppendLine(".url-box.mt { margin-top: 0.5rem; }");
         sb.AppendLine("</style>");
         sb.AppendLine("</head>");
         sb.AppendLine("<body>");
@@ -173,7 +176,7 @@ public static class Endpoints
         sb.AppendLine($"<a class=\"btn\" style=\"background:#37474F;\" href=\"webcal://{host}/calendar.ics\">Подписаться на всё</a>");
         sb.AppendLine("</div>");
         var allUrl = $"{baseUrl}/calendar.ics";
-        sb.AppendLine($"<code style=\"display:flex;align-items:center;justify-content:space-between;gap:0.5rem;margin-top:0.5rem;font-size:0.8rem;padding:0.4rem 0.6rem;\">{allUrl}<button onclick=\"copyUrl(this,'{allUrl}')\" title=\"Копировать\" class=\"copy-btn\">{copyIcon}</button></code>");
+        sb.AppendLine($"<div class=\"url-box mt\">{allUrl}<button onclick=\"copyUrl(this,'{allUrl}')\" title=\"Копировать\" class=\"copy-btn\">{copyIcon}</button></div>");
         sb.AppendLine("</div>");
 
         // ── Per category ──
@@ -188,27 +191,9 @@ public static class Endpoints
             sb.AppendLine($"<a class=\"btn\" style=\"background:{color}\" href=\"webcal://{host}/calendar/{cat.Slug}.ics\">Подписаться</a>");
             sb.AppendLine("</div>");
             var catUrl = $"{baseUrl}/calendar/{cat.Slug}.ics";
-            sb.AppendLine($"<code style=\"display:flex;align-items:center;justify-content:space-between;gap:0.5rem;margin-top:0.5rem;font-size:0.8rem;padding:0.4rem 0.6rem;\">{catUrl}<button onclick=\"copyUrl(this,'{catUrl}')\" title=\"Копировать\" class=\"copy-btn\">{copyIcon}</button></code>");
+            sb.AppendLine($"<div class=\"url-box mt\">{catUrl}<button onclick=\"copyUrl(this,'{catUrl}')\" title=\"Копировать\" class=\"copy-btn\">{copyIcon}</button></div>");
             sb.AppendLine("</div>");
         }
-
-        // ── Manual subscribe ──
-        sb.AppendLine("<div class=\"card\">");
-        sb.AppendLine("<h2>📱 Как подписаться вручную</h2>");
-        sb.AppendLine("<ol class=\"steps\">");
-        sb.AppendLine("<li>Откройте <strong>Настройки</strong> → <strong>Приложения</strong> → <strong>Календарь</strong> → <strong>Учётные записи</strong></li>");
-        sb.AppendLine("<li>Нажмите <strong>Добавить учётную запись</strong> → <strong>Другое</strong> → <strong>Подписной календарь</strong></li>");
-        sb.AppendLine("<li>Вставьте один из URL ниже</li>");
-        sb.AppendLine("</ol>");
-
-        // Absolute URL examples with copy buttons
-        sb.AppendLine("<div style=\"margin-top:1rem;\">");
-        AddCopyableUrl(sb, $"{baseUrl}/calendar.ics", "Все события");
-        AddCopyableUrl(sb, $"{baseUrl}/calendar.ics?city=gomel", "Все события в Гомеле");
-        AddCopyableUrl(sb, $"{baseUrl}/calendar.ics?category=mass-skating&city=gomel", "Массовое катание, Гомель");
-        AddCopyableUrl(sb, $"{baseUrl}/calendar.ics?category=mass-skating&category=hockey", "Категории через запятую (несколько category=)");
-        sb.AppendLine("</div>");
-        sb.AppendLine("</div>");
 
         // ── Copy-to-clipboard script ──
         sb.AppendLine("<script>");
@@ -226,15 +211,6 @@ public static class Endpoints
         sb.AppendLine("</html>");
 
         return sb.ToString();
-    }
-
-    private static void AddCopyableUrl(StringBuilder sb, string url, string label)
-    {
-        const string icon = "<svg width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='9' y='9' width='13' height='13' rx='2' ry='2'></rect><path d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'></path></svg>";
-        sb.AppendLine($"<div style=\"display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;\">");
-        sb.AppendLine($"<code style=\"flex:1;font-size:0.8rem;padding:0.4rem 0.6rem;display:flex;align-items:center;justify-content:space-between;gap:0.5rem;\">{url}<button onclick=\"copyUrl(this,'{url}')\" title=\"Копировать\" class=\"copy-btn\">{icon}</button></code>");
-        sb.AppendLine($"<span style=\"color:#888;font-size:0.8rem;white-space:nowrap;\">{label}</span>");
-        sb.AppendLine("</div>");
     }
 
     private static RouteHandlerBuilder RequireApiKey(this RouteHandlerBuilder builder, string expectedKey)

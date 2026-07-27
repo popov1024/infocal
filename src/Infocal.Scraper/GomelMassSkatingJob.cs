@@ -82,6 +82,7 @@ public class GomelMassSkatingJob : IJob
                     {
                         description = ev.Title,
                         location = ev.Location,
+                        address = ev.Address,
                         city = ev.City,
                         start = ev.Start,
                         end = ev.End,
