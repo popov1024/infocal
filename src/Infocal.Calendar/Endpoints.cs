@@ -12,8 +12,8 @@ public static class Endpoints
         // ── Home page ──
         app.MapGet("/", async (HttpContext ctx, EventStore store, CancellationToken ct) =>
         {
-            var scheme = ctx.Request.Scheme;
-            var host = ctx.Request.Host.Value ?? "localhost";
+            var scheme = ctx.Request.Headers["X-Forwarded-Proto"].FirstOrDefault() ?? ctx.Request.Scheme;
+            var host = ctx.Request.Headers["X-Forwarded-Host"].FirstOrDefault() ?? ctx.Request.Host.Value ?? "localhost";
             var baseUrl = $"{scheme}://{host}";
             var cities = await store.GetCitiesAsync(ct);
             var categories = await store.GetCategoriesAsync(ct);
@@ -230,7 +230,7 @@ public static class Endpoints
 
     private static void AddCopyableUrl(StringBuilder sb, string url, string label)
     {
-        var icon = "<svg width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='9' y='9' width='13' height='13' rx='2' ry='2'></rect><path d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'></path></svg>";
+        const string icon = "<svg width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='9' y='9' width='13' height='13' rx='2' ry='2'></rect><path d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'></path></svg>";
         sb.AppendLine($"<div style=\"display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;\">");
         sb.AppendLine($"<code style=\"flex:1;font-size:0.8rem;padding:0.4rem 0.6rem;display:flex;align-items:center;justify-content:space-between;gap:0.5rem;\">{url}<button onclick=\"copyUrl(this,'{url}')\" title=\"Копировать\" class=\"copy-btn\">{icon}</button></code>");
         sb.AppendLine($"<span style=\"color:#888;font-size:0.8rem;white-space:nowrap;\">{label}</span>");
