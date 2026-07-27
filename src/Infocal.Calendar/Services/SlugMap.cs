@@ -10,6 +10,7 @@ public static class SlugMap
     public static readonly Entry[] Categories =
     [
         new("mass-skating",   "Массовое катание",    "⛸️", "#1565C0"),
+        new("quiz",           "Квиз",                 "🧠", "#7B1FA2"),
         new("hockey",         "Хоккей",              "🏒", "#C62828"),
         new("figure-skating", "Фигурное катание",    "⛸️", "#6A1B9A"),
         new("shows",          "Шоу",                 "🎭", "#E65100"),

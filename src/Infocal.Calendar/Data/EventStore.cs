@@ -152,13 +152,13 @@ public class EventStore(AppDbContext db)
         return id.ToLowerInvariant().Replace(' ', '-');
     }
 
-    private async Task<string?> GetCategoryNameAsync(string slug, CancellationToken ct)
+    private async Task<string> GetCategoryNameAsync(string slug, CancellationToken ct)
     {
         var entity = await db.Categories.FindAsync([slug], ct);
         return entity?.Name ?? slug;
     }
 
-    private async Task<string?> GetCityNameAsync(string slug, CancellationToken ct)
+    private async Task<string> GetCityNameAsync(string slug, CancellationToken ct)
     {
         var entity = await db.Cities.FindAsync([slug], ct);
         return entity?.Name ?? slug;

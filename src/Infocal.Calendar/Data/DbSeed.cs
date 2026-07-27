@@ -17,7 +17,8 @@ public static class DbSeed
         if (!await db.Categories.AnyAsync())
         {
             db.Categories.AddRange(
-                new CategoryEntity { Slug = "mass-skating", Name = "Массовое катание", Icon = "⛸️", Color = "#1565C0" }
+                new CategoryEntity { Slug = "mass-skating", Name = "Массовое катание", Icon = "⛸️", Color = "#1565C0" },
+                new CategoryEntity { Slug = "quiz", Name = "Квиз", Icon = "🧠", Color = "#7B1FA2" }
             );
         }
 
