@@ -35,6 +35,8 @@ services:
       - TZ=Europe/Minsk
     depends_on:
       - calendar
+    networks:
+      - traefik
 
 volumes:
   calendar-data:
