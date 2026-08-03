@@ -21,6 +21,7 @@ public class AppDbContext : DbContext
             e.HasIndex(x => x.City);
             e.HasIndex(x => new { x.City, x.Category });
             e.HasIndex(x => x.SourceUrl);
+            e.HasIndex(x => new { x.SourceUrl, x.Start });
         });
 
         modelBuilder.Entity<CategoryEntity>(e =>

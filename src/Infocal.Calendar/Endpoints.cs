@@ -69,9 +69,8 @@ public static class Endpoints
 
         app.MapPost("/events", async (EventStore store, EventItem e, CancellationToken ct) =>
         {
-            e.Id = Guid.NewGuid();
-            var created = await store.AddAsync(e, ct);
-            return Results.Created($"/events/{created.Id}", created);
+            var result = await store.UpsertAsync(e, ct);
+            return Results.Ok(result);
         }).RequireApiKey(apiKey);
 
         app.MapDelete("/events/by-source", async (EventStore store, string sourceUrl, CancellationToken ct) =>

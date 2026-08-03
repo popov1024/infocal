@@ -51,14 +51,13 @@ public class WowQuizJob : IJob
             {
                 var deleteUrl = $"/events/by-source?sourceUrl={Uri.EscapeDataString(SourceUrl)}";
                 await _apiHttp.DeleteAsync(deleteUrl, context.CancellationToken);
-                _logger.LogDebug("🗑️ Старые события WowQuiz удалены");
             }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "⚠️ Не удалось удалить старые события");
             }
 
-            // Push new events
+            // Push events (upsert handles dedup)
             int pushed = 0, failed = 0;
             foreach (var game in games)
             {

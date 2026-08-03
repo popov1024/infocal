@@ -77,13 +77,13 @@ public class EventStore(AppDbContext db)
 
     // ── Write ──
 
-    public async Task<EventItem> AddAsync(EventItem e, CancellationToken ct = default)
+    public async Task<EventItem> UpsertAsync(EventItem e, CancellationToken ct = default)
     {
         // Resolve category slug from slug or name
         if (!string.IsNullOrWhiteSpace(e.Category))
         {
             var resolved = await ResolveCategorySlugAsync(e.Category, ct);
-            e.Category = resolved; // store slug
+            e.Category = resolved;
             e.CategoryDescription = await GetCategoryNameAsync(resolved, ct);
         }
 
@@ -95,9 +95,30 @@ public class EventStore(AppDbContext db)
             e.CityDescription = await GetCityNameAsync(resolved, ct);
         }
 
-        db.Events.Add(e);
+        // Upsert: find existing by SourceUrl + Start
+        var existing = await db.Events
+            .FirstOrDefaultAsync(ev => ev.SourceUrl == e.SourceUrl && ev.Start == e.Start, ct);
+
+        if (existing is not null)
+        {
+            existing.Description = e.Description;
+            existing.Location = e.Location;
+            existing.Address = e.Address;
+            existing.End = e.End;
+            existing.Category = e.Category;
+            existing.CategoryDescription = e.CategoryDescription;
+            existing.City = e.City;
+            existing.CityDescription = e.CityDescription;
+            existing.IsAllDay = e.IsAllDay;
+        }
+        else
+        {
+            e.Id = Guid.NewGuid();
+            db.Events.Add(e);
+        }
+
         await db.SaveChangesAsync(ct);
-        return e;
+        return existing ?? e;
     }
 
     public async Task<bool> DeleteAsync(Guid id, CancellationToken ct = default)

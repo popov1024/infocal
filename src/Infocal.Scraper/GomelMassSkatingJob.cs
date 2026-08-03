@@ -55,23 +55,18 @@ public class GomelMassSkatingJob : IJob
                 return;
             }
 
-            // Step 3: delete old events for this source (idempotency)
+            // Step 3: delete old events for this source
             try
             {
                 var deleteUrl = $"/events/by-source?sourceUrl={Uri.EscapeDataString(url)}";
-                var deleteResp = await _apiHttp.DeleteAsync(deleteUrl, context.CancellationToken);
-                if (deleteResp.IsSuccessStatusCode)
-                {
-                    var deleteBody = await deleteResp.Content.ReadAsStringAsync(context.CancellationToken);
-                    _logger.LogDebug("🗑️  Старые события удалены: {Response}", deleteBody);
-                }
+                await _apiHttp.DeleteAsync(deleteUrl, context.CancellationToken);
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "⚠️  Не удалось удалить старые события — продолжаем");
+                _logger.LogWarning(ex, "⚠️  Не удалось удалить старые события");
             }
 
-            // Step 4: push new events
+            // Step 4: push events (upsert handles dedup)
             int pushed = 0;
             int failed = 0;
             foreach (var ev in events)
