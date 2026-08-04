@@ -28,6 +28,8 @@ services:
     env_file:
       - .secret
     restart: unless-stopped
+    ports:
+      - "5254:80"
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - CalendarApi__BaseUrl=http://calendar
