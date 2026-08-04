@@ -1,0 +1,40 @@
+services:
+  calendar:
+    env_file:
+      - .secret
+    restart: unless-stopped
+    ports:
+      - "5253:80"
+    volumes:
+      - calendar-data:/app/data
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - TZ=Europe/Minsk
+
+  scraper:
+    env_file:
+      - .secret
+    restart: unless-stopped
+    volumes:
+      - scraper-data:/app/data
+    environment:
+      - DOTNET_ENVIRONMENT=Production
+      - CalendarApi__BaseUrl=http://calendar
+      - TZ=Europe/Minsk
+    depends_on:
+      - calendar
+
+  admin:
+    env_file:
+      - .secret
+    restart: unless-stopped
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - CalendarApi__BaseUrl=http://calendar
+      - TZ=Europe/Minsk
+    depends_on:
+      - calendar
+
+volumes:
+  calendar-data:
+  scraper-data:

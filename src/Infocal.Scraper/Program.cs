@@ -12,7 +12,7 @@ var host = Host.CreateDefaultBuilder(args)
         services.AddHttpClient("CalendarApi", client =>
         {
             client.BaseAddress = new Uri(cfg["CalendarApi:BaseUrl"] ?? "http://localhost:5223");
-            client.DefaultRequestHeaders.Add("X-Api-Key", cfg["CalendarApi:ApiKey"] ?? "dev-key-change-me");
+            client.DefaultRequestHeaders.Add("X-Api-Key", cfg["INFOCAL_API_KEY"] ?? "dev-key-change-me");
             client.Timeout = TimeSpan.FromSeconds(30);
         });
 

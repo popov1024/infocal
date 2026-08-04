@@ -7,7 +7,7 @@ var builder = WebApplication.CreateBuilder(args);
 var app = builder.Build();
 
 var apiBase = builder.Configuration["CalendarApi:BaseUrl"] ?? "http://localhost:5223";
-var apiKey = builder.Configuration["CalendarApi:ApiKey"] ?? "dev-key-change-me";
+var apiKey = builder.Configuration["INFOCAL_API_KEY"] ?? "dev-key-change-me";
 
 using var http = new HttpClient
 {

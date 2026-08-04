@@ -18,7 +18,7 @@ builder.Services.AddSingleton<CalendarService>();
 var app = builder.Build();
 
 // ── API key (only required for write endpoints) ──
-var apiKey = builder.Configuration["ApiKey"] ?? "dev-key-change-me";
+var apiKey = builder.Configuration["INFOCAL_API_KEY"] ?? "dev-key-change-me";
 
 // ── Auto-create DB + seed ──
 using (var scope = app.Services.CreateScope())

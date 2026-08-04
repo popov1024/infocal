@@ -1,0 +1,18 @@
+services:
+  calendar:
+    labels:
+      - "traefik.http.routers.infocal.rule=Host(`infocal.popov.by`)"
+      - "traefik.http.routers.infocal.entrypoints=https"
+      - "traefik.http.routers.infocal.tls.certresolver=letsEncrypt"
+    networks:
+      - traefik
+  scraper:
+    networks:
+      - traefik
+  admin:
+    networks:
+      - traefik
+
+networks:
+  traefik:
+    external: true

@@ -4,60 +4,15 @@ services:
       context: .
       dockerfile: src/Infocal.Calendar/Dockerfile
     container_name: infocal-calendar
-    restart: unless-stopped
-    ports:
-      - "5253:80"
-    volumes:
-      - calendar-data:/app/data
-    environment:
-      - ASPNETCORE_ENVIRONMENT=Production
-      - ApiKey=CHANGE-ME-in-production
-      - TZ=Europe/Minsk
-    labels:
-      - "traefik.http.routers.infocal.rule=Host(`infocal.popov.by`)"
-      - "traefik.http.routers.infocal.entrypoints=https"
-      - "traefik.http.routers.infocal.tls.certresolver=letsEncrypt"
-    networks:
-      - traefik
 
   scraper:
     build:
       context: .
       dockerfile: src/Infocal.Scraper/Dockerfile
     container_name: infocal-scraper
-    restart: unless-stopped
-    volumes:
-      - scraper-data:/app/data
-    environment:
-      - DOTNET_ENVIRONMENT=Production
-      - CalendarApi__BaseUrl=http://calendar
-      - CalendarApi__ApiKey=CHANGE-ME-in-production
-      - TZ=Europe/Minsk
-    depends_on:
-      - calendar
-    networks:
-      - traefik
 
   admin:
     build:
       context: .
       dockerfile: src/Infocal.Admin/Dockerfile
     container_name: infocal-admin
-    restart: unless-stopped
-    environment:
-      - ASPNETCORE_ENVIRONMENT=Production
-      - CalendarApi__BaseUrl=http://calendar
-      - CalendarApi__ApiKey=CHANGE-ME-in-production
-      - TZ=Europe/Minsk
-    depends_on:
-      - calendar
-    networks:
-      - traefik
-
-volumes:
-  calendar-data:
-  scraper-data:
-
-networks:
-  traefik:
-    external: true

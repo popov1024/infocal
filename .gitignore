@@ -13,6 +13,9 @@
 # Scraper state
 last_scrape.txt
 
+# Secrets
+.secret
+
 # IDE
 .idea/
 .vs/
