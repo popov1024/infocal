@@ -104,9 +104,9 @@ logger.LogInformation("   💤 Обычный режим:     {Cron}", config["S
 // ── Первый запуск сразу при старте ──
 var schedulerFactory = host.Services.GetRequiredService<ISchedulerFactory>();
 var scheduler = await schedulerFactory.GetScheduler();
-// await scheduler.TriggerJob(new JobKey("GomelMassSkatingJob"));
+await scheduler.TriggerJob(new JobKey("GomelMassSkatingJob"));
 // await scheduler.TriggerJob(new JobKey("WowQuizJob"));
 // VkQuizJob not triggered on startup — requires VK + DeepSeek tokens
-await scheduler.TriggerJob(new JobKey("VkQuizJob"));
+// await scheduler.TriggerJob(new JobKey("VkQuizJob"));
 
 await host.RunAsync();

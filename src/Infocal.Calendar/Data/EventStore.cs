@@ -138,6 +138,58 @@ public class EventStore(AppDbContext db)
         return deleted;
     }
 
+    // ── Category CRUD ──
+
+    public async Task UpsertCategoryAsync(CategoryEntity cat, CancellationToken ct = default)
+    {
+        var existing = await db.Categories.FindAsync([cat.Slug], ct);
+        if (existing is not null)
+        {
+            existing.Name = cat.Name;
+            existing.Icon = cat.Icon;
+            existing.Color = cat.Color;
+        }
+        else
+        {
+            db.Categories.Add(cat);
+        }
+        await db.SaveChangesAsync(ct);
+    }
+
+    public async Task<bool> DeleteCategoryAsync(string slug, CancellationToken ct = default)
+    {
+        var cat = await db.Categories.FindAsync([slug], ct);
+        if (cat is null) return false;
+        db.Categories.Remove(cat);
+        await db.SaveChangesAsync(ct);
+        return true;
+    }
+
+    // ── City CRUD ──
+
+    public async Task UpsertCityAsync(CityEntity city, CancellationToken ct = default)
+    {
+        var existing = await db.Cities.FindAsync([city.Slug], ct);
+        if (existing is not null)
+        {
+            existing.Name = city.Name;
+        }
+        else
+        {
+            db.Cities.Add(city);
+        }
+        await db.SaveChangesAsync(ct);
+    }
+
+    public async Task<bool> DeleteCityAsync(string slug, CancellationToken ct = default)
+    {
+        var city = await db.Cities.FindAsync([slug], ct);
+        if (city is null) return false;
+        db.Cities.Remove(city);
+        await db.SaveChangesAsync(ct);
+        return true;
+    }
+
     // ── Slug resolution helpers ──
 
     private async Task<string> ResolveCategorySlugAsync(string id, CancellationToken ct)

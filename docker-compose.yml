@@ -38,6 +38,22 @@ services:
     networks:
       - traefik
 
+  admin:
+    build:
+      context: .
+      dockerfile: src/Infocal.Admin/Dockerfile
+    container_name: infocal-admin
+    restart: unless-stopped
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - CalendarApi__BaseUrl=http://calendar
+      - CalendarApi__ApiKey=CHANGE-ME-in-production
+      - TZ=Europe/Minsk
+    depends_on:
+      - calendar
+    networks:
+      - traefik
+
 volumes:
   calendar-data:
   scraper-data:

@@ -84,6 +84,32 @@ public static class Endpoints
             var deleted = await store.DeleteAsync(id, ct);
             return deleted ? Results.NoContent() : Results.NotFound();
         }).RequireApiKey(apiKey);
+
+        // ── Categories CRUD ──
+        app.MapPost("/categories", async (EventStore store, CategoryEntity cat, CancellationToken ct) =>
+        {
+            await store.UpsertCategoryAsync(cat, ct);
+            return Results.Ok(cat);
+        }).RequireApiKey(apiKey);
+
+        app.MapDelete("/categories/{slug}", async (EventStore store, string slug, CancellationToken ct) =>
+        {
+            var deleted = await store.DeleteCategoryAsync(slug, ct);
+            return deleted ? Results.NoContent() : Results.NotFound();
+        }).RequireApiKey(apiKey);
+
+        // ── Cities CRUD ──
+        app.MapPost("/cities", async (EventStore store, CityEntity city, CancellationToken ct) =>
+        {
+            await store.UpsertCityAsync(city, ct);
+            return Results.Ok(city);
+        }).RequireApiKey(apiKey);
+
+        app.MapDelete("/cities/{slug}", async (EventStore store, string slug, CancellationToken ct) =>
+        {
+            var deleted = await store.DeleteCityAsync(slug, ct);
+            return deleted ? Results.NoContent() : Results.NotFound();
+        }).RequireApiKey(apiKey);
     }
 
     private static async Task<string> BuildCalendarName(
