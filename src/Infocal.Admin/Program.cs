@@ -100,7 +100,6 @@ app.MapPost("/categories/{slug}/delete", async (string slug, CancellationToken c
 // ── Cities ──
 app.MapGet("/cities", async (CancellationToken ct) =>
 {
-    var types = await http.GetFromJsonAsync<List<TypeDto>>("/types", ct) ?? [];
     var cities = await http.GetFromJsonAsync<List<CityDto>>("/cities", ct) ?? [];
     return Results.Content(BuildCityListPage(cities), "text/html; charset=utf-8");
 });
@@ -128,7 +127,8 @@ app.MapPost("/cities/{slug}/delete", async (string slug, CancellationToken ct) =
 app.MapGet("/types", async (CancellationToken ct) =>
 {
     var types = await http.GetFromJsonAsync<List<TypeDto>>("/types", ct) ?? [];
-    return Results.Content(BuildTypeListPage(types), "text/html; charset=utf-8");
+    var cats = await http.GetFromJsonAsync<List<CatDto>>("/categories", ct) ?? [];
+    return Results.Content(BuildTypeListPage(types, cats), "text/html; charset=utf-8");
 });
 
 app.MapPost("/types", async (HttpContext ctx, CancellationToken ct) =>
@@ -137,7 +137,8 @@ app.MapPost("/types", async (HttpContext ctx, CancellationToken ct) =>
     var type = new TypeDto
     {
         Slug = form["slug"].FirstOrDefault() ?? "",
-        Name = form["name"].FirstOrDefault() ?? ""
+        Name = form["name"].FirstOrDefault() ?? "",
+        CategorySlug = form["categorySlug"].FirstOrDefault() ?? ""
     };
     if (!string.IsNullOrWhiteSpace(type.Slug))
         await http.PostAsJsonAsync("/types", type, ct);
@@ -222,7 +223,9 @@ static string BuildFormPage(EventDto? ev, List<CatDto> cats, List<CityDto> citie
     foreach (var t in types)
     {
         var sel = t.Slug == ev?.Type ? "selected" : "";
-        sb.AppendLine($"<option value='{t.Slug}' {sel}>{HtmlEncoder.Default.Encode(t.Name)}</option>");
+        var catName = cats.FirstOrDefault(c => c.Slug == t.CategorySlug)?.Name ?? "";
+        var label = string.IsNullOrEmpty(catName) ? t.Name : $"{t.Name} ({catName})";
+        sb.AppendLine($"<option value='{t.Slug}' {sel}>{HtmlEncoder.Default.Encode(label)}</option>");
     }
     sb.AppendLine("</select>");
 
@@ -349,18 +352,20 @@ static string BuildCityListPage(List<CityDto> cities)
     return sb.ToString();
 }
 
-static string BuildTypeListPage(List<TypeDto> types)
+static string BuildTypeListPage(List<TypeDto> types, List<CatDto> cats)
 {
     var sb = new StringBuilder();
     PageStart(sb, "Типы");
     sb.AppendLine("<h1>📌 Типы</h1>");
 
-    sb.AppendLine("<table><tr><th>Slug</th><th>Название</th><th></th></tr>");
+    sb.AppendLine("<table><tr><th>Slug</th><th>Название</th><th>Категория</th><th></th></tr>");
     foreach (var t in types)
     {
+        var catName = cats.FirstOrDefault(c => c.Slug == t.CategorySlug)?.Name ?? t.CategorySlug ?? "—";
         sb.AppendLine("<tr>");
         sb.AppendLine($"<td>{HtmlEncoder.Default.Encode(t.Slug)}</td>");
         sb.AppendLine($"<td>{HtmlEncoder.Default.Encode(t.Name)}</td>");
+        sb.AppendLine($"<td>{HtmlEncoder.Default.Encode(catName)}</td>");
         sb.AppendLine($"<td class='actions'><form method='post' action='/types/{t.Slug}/delete' style='display:inline' onsubmit='return confirm(\"Удалить {HtmlEncoder.Default.Encode(t.Name)}?\")'><button class='btn-sm btn-del'>🗑️</button></form></td>");
         sb.AppendLine("</tr>");
     }
@@ -370,6 +375,13 @@ static string BuildTypeListPage(List<TypeDto> types)
     sb.AppendLine("<form method='post' action='/types' class='form'>");
     Input(sb, "Slug (латиница)", "slug", "", true);
     Input(sb, "Название", "name", "", true);
+    sb.AppendLine("<label>Категория</label><select name='categorySlug'>");
+    sb.AppendLine("<option value=''>—</option>");
+    foreach (var cat in cats)
+    {
+        sb.AppendLine($"<option value='{cat.Slug}'>{HtmlEncoder.Default.Encode(cat.Name)}</option>");
+    }
+    sb.AppendLine("</select>");
     sb.AppendLine("<div class='form-actions'><button type='submit' class='btn' style='background:#1565C0;'>Добавить</button></div>");
     sb.AppendLine("</form>");
 
@@ -414,4 +426,5 @@ public class TypeDto
 {
     public string Slug { get; set; } = "";
     public string Name { get; set; } = "";
+    public string? CategorySlug { get; set; }
 }

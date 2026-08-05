@@ -211,6 +211,7 @@ public class EventStore(AppDbContext db)
         if (existing is not null)
         {
             existing.Name = type.Name;
+            existing.CategorySlug = type.CategorySlug;
         }
         else
         {

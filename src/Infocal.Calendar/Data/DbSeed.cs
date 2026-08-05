@@ -20,10 +20,10 @@ public static class DbSeed
         ("gomel", "Гомель")
     ];
 
-    private static readonly (string Slug, string Name)[] SeedTypes =
+    private static readonly (string Slug, string Name, string CategorySlug)[] SeedTypes =
     [
-        ("ice-palace", "Ледовый дворец"),
-        ("wow-quiz", "ВАУ КВИЗ")
+        ("ice-palace", "Ледовый дворец", "mass-skating"),
+        ("wow-quiz", "ВАУ КВИЗ", "quiz")
     ];
 
     public static async Task InitializeAsync(AppDbContext db)
@@ -48,11 +48,11 @@ public static class DbSeed
             }
         }
 
-        foreach (var (slug, name) in SeedTypes)
+        foreach (var (slug, name, categorySlug) in SeedTypes)
         {
             if (!await db.Types.AnyAsync(t => t.Slug == slug))
             {
-                db.Types.Add(new TypeEntity { Slug = slug, Name = name });
+                db.Types.Add(new TypeEntity { Slug = slug, Name = name, CategorySlug = categorySlug });
             }
         }
 

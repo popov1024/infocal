@@ -8,4 +8,6 @@ public class TypeEntity
 {
     public string Slug { get; set; } = "";
     public string Name { get; set; } = "";
-}
+    public string CategorySlug { get; set; } = "";
+    public CategoryEntity Category { get; set; } = null!;
+} 

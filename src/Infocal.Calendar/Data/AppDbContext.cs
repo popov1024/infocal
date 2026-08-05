@@ -38,6 +38,10 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<TypeEntity>(e =>
         {
             e.HasKey(x => x.Slug);
+            e.HasOne(x => x.Category)
+                .WithMany()
+                .HasForeignKey(x => x.CategorySlug)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }
