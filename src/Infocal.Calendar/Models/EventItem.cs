@@ -13,6 +13,8 @@ public class EventItem
     public string Address { get; set; } = "";
     public string Category { get; set; } = "";
     public string CategoryDescription { get; set; } = "";
+    public string Type { get; set; } = "";
+    public string TypeDescription { get; set; } = "";
     public string City { get; set; } = "";
     public string CityDescription { get; set; } = "";
     public DateTime Start { get; set; }

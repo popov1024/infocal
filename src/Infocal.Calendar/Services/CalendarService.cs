@@ -56,6 +56,8 @@ public class CalendarService
 
             if (!string.IsNullOrWhiteSpace(ev.CategoryDescription))
                 calEvent.Categories.Add(ev.CategoryDescription);
+            if (!string.IsNullOrWhiteSpace(ev.TypeDescription) && ev.TypeDescription != ev.CategoryDescription)
+                calEvent.Categories.Add(ev.TypeDescription);
 
             calendar.Events.Add(calEvent);
         }

@@ -75,6 +75,9 @@ public class EventStore(AppDbContext db)
     public async Task<IReadOnlyList<CityEntity>> GetCitiesAsync(CancellationToken ct = default)
         => await db.Cities.AsNoTracking().OrderBy(c => c.Name).ToListAsync(ct);
 
+    public async Task<IReadOnlyList<TypeEntity>> GetTypesAsync(CancellationToken ct = default)
+        => await db.Types.AsNoTracking().OrderBy(t => t.Name).ToListAsync(ct);
+
     // ── Write ──
 
     public async Task<EventItem> UpsertAsync(EventItem e, CancellationToken ct = default)
@@ -95,6 +98,14 @@ public class EventStore(AppDbContext db)
             e.CityDescription = await GetCityNameAsync(resolved, ct);
         }
 
+        // Resolve type slug from slug or name
+        if (!string.IsNullOrWhiteSpace(e.Type))
+        {
+            var resolved = await ResolveTypeSlugAsync(e.Type, ct);
+            e.Type = resolved;
+            e.TypeDescription = await GetTypeNameAsync(resolved, ct);
+        }
+
         // Upsert: find existing by SourceUrl + Start
         var existing = await db.Events
             .FirstOrDefaultAsync(ev => ev.SourceUrl == e.SourceUrl && ev.Start == e.Start, ct);
@@ -107,6 +118,8 @@ public class EventStore(AppDbContext db)
             existing.End = e.End;
             existing.Category = e.Category;
             existing.CategoryDescription = e.CategoryDescription;
+            existing.Type = e.Type;
+            existing.TypeDescription = e.TypeDescription;
             existing.City = e.City;
             existing.CityDescription = e.CityDescription;
             existing.IsAllDay = e.IsAllDay;
@@ -190,6 +203,31 @@ public class EventStore(AppDbContext db)
         return true;
     }
 
+    // ── Type CRUD ──
+
+    public async Task UpsertTypeAsync(TypeEntity type, CancellationToken ct = default)
+    {
+        var existing = await db.Types.FindAsync([type.Slug], ct);
+        if (existing is not null)
+        {
+            existing.Name = type.Name;
+        }
+        else
+        {
+            db.Types.Add(type);
+        }
+        await db.SaveChangesAsync(ct);
+    }
+
+    public async Task<bool> DeleteTypeAsync(string slug, CancellationToken ct = default)
+    {
+        var type = await db.Types.FindAsync([slug], ct);
+        if (type is null) return false;
+        db.Types.Remove(type);
+        await db.SaveChangesAsync(ct);
+        return true;
+    }
+
     // ── Slug resolution helpers ──
 
     private async Task<string> ResolveCategorySlugAsync(string id, CancellationToken ct)
@@ -234,6 +272,21 @@ public class EventStore(AppDbContext db)
     private async Task<string> GetCityNameAsync(string slug, CancellationToken ct)
     {
         var entity = await db.Cities.FindAsync([slug], ct);
+        return entity?.Name ?? slug;
+    }
+
+    private async Task<string> ResolveTypeSlugAsync(string id, CancellationToken ct)
+    {
+        var entity = await db.Types.FindAsync([id], ct);
+        if (entity is not null) return entity.Slug;
+        entity = await db.Types.FirstOrDefaultAsync(t => t.Name == id, ct);
+        if (entity is not null) return entity.Slug;
+        return id.ToLowerInvariant().Replace(' ', '-');
+    }
+
+    private async Task<string> GetTypeNameAsync(string slug, CancellationToken ct)
+    {
+        var entity = await db.Types.FindAsync([slug], ct);
         return entity?.Name ?? slug;
     }
 }

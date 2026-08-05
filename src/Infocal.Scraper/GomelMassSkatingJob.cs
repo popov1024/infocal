@@ -79,6 +79,8 @@ public class GomelMassSkatingJob : IJob
                         location = ev.Location,
                         address = ev.Address,
                         city = ev.City,
+                        type = "ice-palace",
+                        typeDescription = "Ледовый дворец",
                         start = ev.Start,
                         end = ev.End,
                         category = ev.Category,

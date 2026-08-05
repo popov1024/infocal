@@ -80,6 +80,8 @@ public class WowQuizJob : IJob
                         location = venue,
                         address = address,
                         city = "Гомель",
+                        type = "wow-quiz",
+                        typeDescription = "ВАУ КВИЗ",
                         start = start,
                         end = end,
                         category = "Квиз",

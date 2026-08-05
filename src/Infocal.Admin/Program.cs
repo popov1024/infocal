@@ -29,8 +29,9 @@ app.MapGet("/", async (CancellationToken ct) =>
 app.MapGet("/create", async (CancellationToken ct) =>
 {
     var cats = await http.GetFromJsonAsync<List<CatDto>>("/categories", ct) ?? [];
+    var types = await http.GetFromJsonAsync<List<TypeDto>>("/types", ct) ?? [];
     var cities = await http.GetFromJsonAsync<List<CityDto>>("/cities", ct) ?? [];
-    return Results.Content(BuildFormPage(null, cats, cities), "text/html; charset=utf-8");
+    return Results.Content(BuildFormPage(null, cats, cities, types), "text/html; charset=utf-8");
 });
 
 app.MapPost("/create", async (HttpContext ctx, CancellationToken ct) =>
@@ -47,8 +48,9 @@ app.MapGet("/{id:guid}/edit", async (Guid id, CancellationToken ct) =>
     var ev = await http.GetFromJsonAsync<EventDto>($"/events/{id}", ct);
     if (ev is null) return Results.NotFound();
     var cats = await http.GetFromJsonAsync<List<CatDto>>("/categories", ct) ?? [];
+    var types = await http.GetFromJsonAsync<List<TypeDto>>("/types", ct) ?? [];
     var cities = await http.GetFromJsonAsync<List<CityDto>>("/cities", ct) ?? [];
-    return Results.Content(BuildFormPage(ev, cats, cities), "text/html; charset=utf-8");
+    return Results.Content(BuildFormPage(ev, cats, cities, types), "text/html; charset=utf-8");
 });
 
 app.MapPost("/{id:guid}/edit", async (HttpContext ctx, Guid id, CancellationToken ct) =>
@@ -98,6 +100,7 @@ app.MapPost("/categories/{slug}/delete", async (string slug, CancellationToken c
 // ── Cities ──
 app.MapGet("/cities", async (CancellationToken ct) =>
 {
+    var types = await http.GetFromJsonAsync<List<TypeDto>>("/types", ct) ?? [];
     var cities = await http.GetFromJsonAsync<List<CityDto>>("/cities", ct) ?? [];
     return Results.Content(BuildCityListPage(cities), "text/html; charset=utf-8");
 });
@@ -121,6 +124,32 @@ app.MapPost("/cities/{slug}/delete", async (string slug, CancellationToken ct) =
     return Results.Redirect("/cities");
 });
 
+// ── Types ──
+app.MapGet("/types", async (CancellationToken ct) =>
+{
+    var types = await http.GetFromJsonAsync<List<TypeDto>>("/types", ct) ?? [];
+    return Results.Content(BuildTypeListPage(types), "text/html; charset=utf-8");
+});
+
+app.MapPost("/types", async (HttpContext ctx, CancellationToken ct) =>
+{
+    var form = await ctx.Request.ReadFormAsync(ct);
+    var type = new TypeDto
+    {
+        Slug = form["slug"].FirstOrDefault() ?? "",
+        Name = form["name"].FirstOrDefault() ?? ""
+    };
+    if (!string.IsNullOrWhiteSpace(type.Slug))
+        await http.PostAsJsonAsync("/types", type, ct);
+    return Results.Redirect("/types");
+});
+
+app.MapPost("/types/{slug}/delete", async (string slug, CancellationToken ct) =>
+{
+    await http.DeleteAsync($"/types/{slug}", ct);
+    return Results.Redirect("/types");
+});
+
 app.Run();
 
 // ── Helpers ──
@@ -131,6 +160,8 @@ static EventDto FormToEvent(IFormCollection form) => new()
     Location = form["location"].FirstOrDefault() ?? "",
     Address = form["address"].FirstOrDefault() ?? "",
     Category = form["category"].FirstOrDefault() ?? "",
+    Type = form["type"].FirstOrDefault() ?? "",
+    TypeDescription = form["typeDescription"].FirstOrDefault() ?? "",
     City = form["city"].FirstOrDefault() ?? "",
     Start = DateTime.TryParse(form["start"].FirstOrDefault(), out var s) ? s : DateTime.UtcNow,
     End = DateTime.TryParse(form["end"].FirstOrDefault(), out var e) ? e : DateTime.UtcNow,
@@ -171,7 +202,7 @@ static string BuildListPage(List<EventDto> events)
     return sb.ToString();
 }
 
-static string BuildFormPage(EventDto? ev, List<CatDto> cats, List<CityDto> cities)
+static string BuildFormPage(EventDto? ev, List<CatDto> cats, List<CityDto> cities, List<TypeDto> types)
 {
     var isNew = ev is null;
     var id = ev?.Id.ToString() ?? "";
@@ -185,6 +216,15 @@ static string BuildFormPage(EventDto? ev, List<CatDto> cats, List<CityDto> citie
     Input(sb, "Описание", "description", ev?.Description ?? "", true);
     Input(sb, "Место", "location", ev?.Location ?? "");
     Input(sb, "Адрес", "address", ev?.Address ?? "");
+
+    sb.AppendLine("<label>Тип</label><select name='type'>");
+    sb.AppendLine("<option value=''>—</option>");
+    foreach (var t in types)
+    {
+        var sel = t.Slug == ev?.Type ? "selected" : "";
+        sb.AppendLine($"<option value='{t.Slug}' {sel}>{HtmlEncoder.Default.Encode(t.Name)}</option>");
+    }
+    sb.AppendLine("</select>");
 
     sb.AppendLine("<label>Категория</label><select name='category'>");
     foreach (var cat in cats)
@@ -244,7 +284,7 @@ static void PageStart(StringBuilder sb, string title)
     sb.AppendLine(".form input,.form select{display:block;width:100%;padding:0.5rem;margin-top:0.25rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem}");
     sb.AppendLine(".form-actions{display:flex;gap:0.5rem;margin-top:1.5rem}");
     sb.AppendLine("</style></head><body>");
-    sb.AppendLine("<nav style='margin-bottom:1.5rem;display:flex;gap:1rem;'><a href='/'>📅 События</a> · <a href='/categories'>🏷️ Категории</a> · <a href='/cities'>🏙️ Города</a></nav>");
+    sb.AppendLine("<nav style='margin-bottom:1.5rem;display:flex;gap:1rem;'><a href='/'>📅 События</a> · <a href='/categories'>🏷️ Категории</a> · <a href='/types'>📌 Типы</a> · <a href='/cities'>🏙️ Города</a></nav>");
 }
 
 static void PageEnd(StringBuilder sb) => sb.AppendLine("</body></html>");
@@ -309,6 +349,34 @@ static string BuildCityListPage(List<CityDto> cities)
     return sb.ToString();
 }
 
+static string BuildTypeListPage(List<TypeDto> types)
+{
+    var sb = new StringBuilder();
+    PageStart(sb, "Типы");
+    sb.AppendLine("<h1>📌 Типы</h1>");
+
+    sb.AppendLine("<table><tr><th>Slug</th><th>Название</th><th></th></tr>");
+    foreach (var t in types)
+    {
+        sb.AppendLine("<tr>");
+        sb.AppendLine($"<td>{HtmlEncoder.Default.Encode(t.Slug)}</td>");
+        sb.AppendLine($"<td>{HtmlEncoder.Default.Encode(t.Name)}</td>");
+        sb.AppendLine($"<td class='actions'><form method='post' action='/types/{t.Slug}/delete' style='display:inline' onsubmit='return confirm(\"Удалить {HtmlEncoder.Default.Encode(t.Name)}?\")'><button class='btn-sm btn-del'>🗑️</button></form></td>");
+        sb.AppendLine("</tr>");
+    }
+    sb.AppendLine("</table>");
+
+    sb.AppendLine("<h2 style='margin-top:1.5rem;'>+ Добавить тип</h2>");
+    sb.AppendLine("<form method='post' action='/types' class='form'>");
+    Input(sb, "Slug (латиница)", "slug", "", true);
+    Input(sb, "Название", "name", "", true);
+    sb.AppendLine("<div class='form-actions'><button type='submit' class='btn' style='background:#1565C0;'>Добавить</button></div>");
+    sb.AppendLine("</form>");
+
+    PageEnd(sb);
+    return sb.ToString();
+}
+
 // ── DTOs ──
 
 public class EventDto
@@ -319,6 +387,8 @@ public class EventDto
     public string? Address { get; set; }
     public string? Category { get; set; }
     public string? CategoryDescription { get; set; }
+    public string? Type { get; set; }
+    public string? TypeDescription { get; set; }
     public string? City { get; set; }
     public string? CityDescription { get; set; }
     public DateTime Start { get; set; }
@@ -335,6 +405,12 @@ public class CatDto
 }
 
 public class CityDto
+{
+    public string Slug { get; set; } = "";
+    public string Name { get; set; } = "";
+}
+
+public class TypeDto
 {
     public string Slug { get; set; } = "";
     public string Name { get; set; } = "";

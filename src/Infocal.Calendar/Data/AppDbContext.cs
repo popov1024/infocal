@@ -10,6 +10,7 @@ public class AppDbContext : DbContext
     public DbSet<EventItem> Events => Set<EventItem>();
     public DbSet<CategoryEntity> Categories => Set<CategoryEntity>();
     public DbSet<CityEntity> Cities => Set<CityEntity>();
+    public DbSet<TypeEntity> Types => Set<TypeEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -30,6 +31,11 @@ public class AppDbContext : DbContext
         });
 
         modelBuilder.Entity<CityEntity>(e =>
+        {
+            e.HasKey(x => x.Slug);
+        });
+
+        modelBuilder.Entity<TypeEntity>(e =>
         {
             e.HasKey(x => x.Slug);
         });
