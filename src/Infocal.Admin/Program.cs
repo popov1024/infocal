@@ -157,8 +157,8 @@ app.Run();
 
 static EventDto FormToEvent(IFormCollection form) => new()
 {
+    Summary = form["summary"].FirstOrDefault() ?? "",
     Description = form["description"].FirstOrDefault() ?? "",
-    Location = form["location"].FirstOrDefault() ?? "",
     Address = form["address"].FirstOrDefault() ?? "",
     Category = form["category"].FirstOrDefault() ?? "",
     Type = form["type"].FirstOrDefault() ?? "",
@@ -188,8 +188,8 @@ static string BuildListPage(List<EventDto> events)
         {
             sb.AppendLine("<tr>");
             sb.AppendLine($"<td>{ev.Start:dd.MM.yyyy HH:mm}</td>");
-            sb.AppendLine($"<td>{HtmlEncoder.Default.Encode(ev.Description)}</td>");
-            sb.AppendLine($"<td>{HtmlEncoder.Default.Encode(ev.Location ?? "")}</td>");
+            sb.AppendLine($"<td>{HtmlEncoder.Default.Encode(ev.Summary)}</td>");
+            sb.AppendLine($"<td>{HtmlEncoder.Default.Encode(ev.Description ?? "")}</td>");
             sb.AppendLine($"<td><span class='cat-tag'>{HtmlEncoder.Default.Encode(ev.CategoryDescription ?? ev.Category ?? "")}</span></td>");
             sb.AppendLine("<td class='actions'>");
             sb.AppendLine($"<a href='/{ev.Id}/edit' class='btn-sm'>✏️</a>");
@@ -214,8 +214,8 @@ static string BuildFormPage(EventDto? ev, List<CatDto> cats, List<CityDto> citie
     sb.AppendLine($"<h1>{title}</h1>");
     sb.AppendLine($"<form method='post' action='/{(isNew ? "create" : $"{id}/edit")}' class='form'>");
 
-    Input(sb, "Описание", "description", ev?.Description ?? "", true);
-    Input(sb, "Место", "location", ev?.Location ?? "");
+    Input(sb, "Название", "summary", ev?.Summary ?? "", true);
+    Input(sb, "Описание", "description", ev?.Description ?? "");
     Input(sb, "Адрес", "address", ev?.Address ?? "");
 
     sb.AppendLine("<label>Тип</label><select name='type'>");
@@ -394,8 +394,8 @@ static string BuildTypeListPage(List<TypeDto> types, List<CatDto> cats)
 public class EventDto
 {
     public Guid Id { get; set; }
-    public string Description { get; set; } = "";
-    public string? Location { get; set; }
+    public string Summary { get; set; } = "";
+    public string? Description { get; set; }
     public string? Address { get; set; }
     public string? Category { get; set; }
     public string? CategoryDescription { get; set; }

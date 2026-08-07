@@ -8,8 +8,8 @@ namespace Infocal.Calendar.Models;
 public class EventItem
 {
     public Guid Id { get; set; } = Guid.NewGuid();
+    public string Summary { get; set; } = "";
     public string Description { get; set; } = "";
-    public string Location { get; set; } = "";
     public string Address { get; set; } = "";
     public string Category { get; set; } = "";
     public string CategoryDescription { get; set; } = "";

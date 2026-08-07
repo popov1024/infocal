@@ -132,8 +132,8 @@ public class EventStore(AppDbContext db)
 
         if (existing is not null)
         {
+            existing.Summary = e.Summary;
             existing.Description = e.Description;
-            existing.Location = e.Location;
             existing.Address = e.Address;
             existing.End = e.End;
             existing.Category = e.Category;

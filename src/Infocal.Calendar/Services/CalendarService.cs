@@ -32,11 +32,19 @@ public class CalendarService
 
         foreach (var ev in events)
         {
+            var desc = ev.Description ?? "";
+            if (!string.IsNullOrWhiteSpace(ev.SourceUrl))
+            {
+                if (desc.Length > 0)
+                    desc += "\n";
+                desc += ev.SourceUrl;
+            }
+
             var calEvent = new Ical.Net.CalendarComponents.CalendarEvent
             {
                 Uid = ev.Id.ToString(),
-                Summary = ev.Description,
-                Description = ev.Location,
+                Summary = ev.Summary,
+                Description = desc.Length > 0 ? desc : null,
                 Location = ev.CityDescription != null && ev.Address != null
                     ? $"{ev.CityDescription}, {ev.Address}"
                     : ev.CityDescription ?? ev.Address ?? "",

@@ -92,10 +92,22 @@ public class MozgoBoynyaJob : IJob
                     var venue = game.Venue?.Name ?? "";
                     var address = game.Venue?.Address ?? "";
 
+                    // Build location with price and registration info for iCal DESCRIPTION
+                    var location = venue;
+                    if (!game.IsFree && game.Price > 0)
+                        location += $"\nСтоимость: {game.Price} {game.Currency}";
+                    if (!string.IsNullOrWhiteSpace(game.RegistrationText))
+                    {
+                        var regInfo = game.RegistrationText;
+                        if (!string.IsNullOrWhiteSpace(game.RegistrationStart))
+                            regInfo += $": {game.RegistrationStart}";
+                        location += $"\n{regInfo}";
+                    }
+
                     var payload = new
                     {
-                        description = title,
-                        location = game.IsOnline ? "Online" : venue,
+                        summary = title,
+                        description = game.IsOnline ? "Online" : location,
                         address = game.IsOnline ? "" : address,
                         city = "Гомель",
                         type = "mozgoboynya",

@@ -76,8 +76,8 @@ public class WowQuizJob : IJob
 
                     var payload = new
                     {
-                        description = title,
-                        location = venue,
+                        summary = title,
+                        description = venue,
                         address = address,
                         city = "Гомель",
                         type = "wow-quiz",

@@ -75,8 +75,8 @@ public class GomelMassSkatingJob : IJob
                 {
                     var payload = new
                     {
-                        description = ev.Title,
-                        location = ev.Location,
+                        summary = ev.Title,
+                        description = ev.Location,
                         address = ev.Address,
                         city = ev.City,
                         type = "ice-palace",
