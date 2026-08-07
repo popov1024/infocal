@@ -43,6 +43,12 @@ var host = Host.CreateDefaultBuilder(args)
             client.Timeout = TimeSpan.FromSeconds(60);
         });
 
+        services.AddHttpClient<MozgoBoynyaScraperService>(client =>
+        {
+            // BaseAddress is overridden per-request (uses the city URL from config)
+            client.Timeout = TimeSpan.FromSeconds(30);
+        });
+
         // ── Quartz ──
         var aggressiveCron = cfg["ScrapeSchedule:AggressiveCron"] ?? "0 */30 * ? * SAT,SUN,MON";
         var lazyCron       = cfg["ScrapeSchedule:LazyCron"]       ?? "0 0 10 ? * TUE,WED,THU,FRI";
@@ -69,12 +75,21 @@ var host = Host.CreateDefaultBuilder(args)
             var quizKey = new JobKey("WowQuizJob");
             q.AddJob<WowQuizJob>(opts => opts.WithIdentity(quizKey));
 
-            // Once daily at 9:00 — quiz schedule doesn't change often
             q.AddTrigger(opts => opts
                 .ForJob(quizKey)
                 .WithIdentity("WowQuizDailyTrigger")
                 .WithCronSchedule("0 0 9 * * ?")
                 .WithDescription("Ежедневно в 9:00 — проверка расписания квизов"));
+
+            // ── MozgoBoynya ──
+            var mzgbKey = new JobKey("MozgoBoynyaJob");
+            q.AddJob<MozgoBoynyaJob>(opts => opts.WithIdentity(mzgbKey));
+
+            q.AddTrigger(opts => opts
+                .ForJob(mzgbKey)
+                .WithIdentity("MozgoBoynyaDailyTrigger")
+                .WithCronSchedule("0 0 9 * * ?")
+                .WithDescription("Ежедневно в 9:00 — проверка расписания Мозгобойни"));
 
             // ── VK Quiz (image-based) — отложено до появления Vision API
             // var vkQuizKey = new JobKey("VkQuizJob");
@@ -105,7 +120,8 @@ logger.LogInformation("   💤 Обычный режим:     {Cron}", config["S
 var schedulerFactory = host.Services.GetRequiredService<ISchedulerFactory>();
 var scheduler = await schedulerFactory.GetScheduler();
 await scheduler.TriggerJob(new JobKey("GomelMassSkatingJob"));
-// await scheduler.TriggerJob(new JobKey("WowQuizJob"));
+await scheduler.TriggerJob(new JobKey("WowQuizJob"));
+await scheduler.TriggerJob(new JobKey("MozgoBoynyaJob"));
 // VkQuizJob not triggered on startup — requires VK + DeepSeek tokens
 // await scheduler.TriggerJob(new JobKey("VkQuizJob"));
 

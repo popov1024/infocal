@@ -23,7 +23,8 @@ public static class DbSeed
     private static readonly (string Slug, string Name, string CategorySlug)[] SeedTypes =
     [
         ("ice-palace", "Ледовый дворец", "mass-skating"),
-        ("wow-quiz", "ВАУ КВИЗ", "quiz")
+        ("wow-quiz", "ВАУ КВИЗ", "quiz"),
+        ("mozgoboynya", "Мозгобойня", "quiz")
     ];
 
     public static async Task InitializeAsync(AppDbContext db)
