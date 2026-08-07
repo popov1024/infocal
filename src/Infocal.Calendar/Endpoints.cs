@@ -1,6 +1,4 @@
-using Infocal.Calendar.Data;
 using Infocal.Calendar.Models;
-using Infocal.Calendar.Services;
 using System.Text;
 
 namespace Infocal.Calendar;

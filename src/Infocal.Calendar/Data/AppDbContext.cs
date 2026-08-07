@@ -1,5 +1,4 @@
 using Infocal.Calendar.Models;
-using Microsoft.EntityFrameworkCore;
 
 namespace Infocal.Calendar.Data;
 
