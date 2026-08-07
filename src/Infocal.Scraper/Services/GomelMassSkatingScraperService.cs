@@ -1,4 +1,4 @@
-using HtmlAgilityPack;
+﻿using HtmlAgilityPack;
 using Infocal.Scraper.Models;
 
 namespace Infocal.Scraper.Services;
@@ -6,19 +6,10 @@ namespace Infocal.Scraper.Services;
 /// <summary>
 /// Scrapes mass skating schedule from gomel.hockey.by
 /// </summary>
-public class GomelMassSkatingScraperService
+public class GomelMassSkatingScraperService(HttpClient http, ILogger<GomelMassSkatingScraperService> logger)
 {
-    private readonly HttpClient _http;
-    private readonly ILogger<GomelMassSkatingScraperService> _logger;
-
     private const string EventsPage = "/news/sobytie/";
     private const string SchedulePrefix = "Расписание массовых катаний";
-
-    public GomelMassSkatingScraperService(HttpClient http, ILogger<GomelMassSkatingScraperService> logger)
-    {
-        _http = http;
-        _logger = logger;
-    }
 
     /// <summary>
     /// Discover all schedule post URLs from the events listing page.
@@ -26,7 +17,7 @@ public class GomelMassSkatingScraperService
     /// </summary>
     public async Task<IReadOnlyList<(string url, string title)>> DiscoverSchedulePostsAsync(CancellationToken ct = default)
     {
-        var mainHtml = await _http.GetStringAsync(EventsPage, ct);
+        var mainHtml = await http.GetStringAsync(EventsPage, ct);
         var doc = new HtmlDocument();
         doc.LoadHtml(mainHtml);
 
@@ -45,7 +36,7 @@ public class GomelMassSkatingScraperService
                 {
                     // Make absolute if relative
                     if (!href.StartsWith("http", StringComparison.OrdinalIgnoreCase))
-                        href = _http.BaseAddress?.ToString().TrimEnd('/') + href;
+                        href = http.BaseAddress?.ToString().TrimEnd('/') + href;
                     posts.Add((href, title));
                 }
             }
@@ -59,15 +50,15 @@ public class GomelMassSkatingScraperService
     /// </summary>
     public async Task<IReadOnlyList<GomelEvent>> ParseSchedulePostAsync(string url, CancellationToken ct = default)
     {
-        _logger.LogDebug("Парсинг {Url}", url);
+        logger.LogDebug("Парсинг {Url}", url);
 
-        var html = await _http.GetAsync(url, ct) is { IsSuccessStatusCode: true } response
+        var html = await http.GetAsync(url, ct) is { IsSuccessStatusCode: true } response
             ? await response.Content.ReadAsStringAsync(ct)
             : string.Empty;
 
         if (string.IsNullOrEmpty(html))
         {
-            _logger.LogWarning("Не удалось загрузить {Url}", url);
+            logger.LogWarning("Не удалось загрузить {Url}", url);
             return [];
         }
 
@@ -121,7 +112,7 @@ public class GomelMassSkatingScraperService
                 }
                 catch (ArgumentOutOfRangeException)
                 {
-                    _logger.LogWarning("Некорректная дата: {Day}.{Month}.{Year}", day, month, year);
+                    logger.LogWarning("Некорректная дата: {Day}.{Month}.{Year}", day, month, year);
                 }
             }
         }
@@ -137,11 +128,11 @@ public class GomelMassSkatingScraperService
         var posts = await DiscoverSchedulePostsAsync(ct);
         if (posts.Count == 0)
         {
-            _logger.LogWarning("Посты с расписанием не найдены");
+            logger.LogWarning("Посты с расписанием не найдены");
             return [];
         }
 
-        _logger.LogInformation("Найден пост: {Title} ({Url})", posts[0].title, posts[0].url);
+        logger.LogInformation("Найден пост: {Title} ({Url})", posts[0].title, posts[0].url);
 
         // Parse the most recent one
         var (url, _) = posts[0];

@@ -1,4 +1,4 @@
-var builder = WebApplication.CreateBuilder(args);
+﻿var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("Default") ?? "Data Source=calendar.db";
 
 builder.Services.AddDbContext<AppDbContext>(opts => opts.UseSqlite(connectionString));

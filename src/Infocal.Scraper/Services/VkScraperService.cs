@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace Infocal.Scraper.Services;
@@ -7,11 +7,9 @@ namespace Infocal.Scraper.Services;
 /// Fetches wall posts from VK public pages via VK API.
 /// Requires a VK Service Token (create app at vk.com/dev).
 /// </summary>
-public class VkScraperService
+public class VkScraperService(HttpClient http, IConfiguration config, ILogger<VkScraperService> logger)
 {
-    private readonly HttpClient _http;
-    private readonly ILogger<VkScraperService> _logger;
-    private readonly string _token;
+    private readonly string _token = config["VkApi:Token"] ?? throw new InvalidOperationException("VkApi:Token not configured");
 
     private const string ApiBase = "https://api.vk.com/method";
     private const string ApiVersion = "5.199";
@@ -21,22 +19,15 @@ public class VkScraperService
         PropertyNameCaseInsensitive = true
     };
 
-    public VkScraperService(HttpClient http, IConfiguration config, ILogger<VkScraperService> logger)
-    {
-        _http = http;
-        _logger = logger;
-        _token = config["VkApi:Token"] ?? throw new InvalidOperationException("VkApi:Token not configured");
-    }
-
     /// <summary>
     /// Returns recent wall posts with photo attachments for a VK domain.
     /// </summary>
     public async Task<IReadOnlyList<VkPost>> GetPhotoPostsAsync(string domain, int count = 10, CancellationToken ct = default)
     {
         var url = $"{ApiBase}/wall.get?domain={domain}&count={count}&v={ApiVersion}&access_token={_token}";
-        _logger.LogDebug("VK API: {Url}", url);
+        logger.LogDebug("VK API: {Url}", url);
 
-        var resp = await _http.GetAsync(url, ct);
+        var resp = await http.GetAsync(url, ct);
         resp.EnsureSuccessStatusCode();
 
         var body = await resp.Content.ReadAsStringAsync(ct);
@@ -44,7 +35,7 @@ public class VkScraperService
 
         if (apiResp?.Error is not null)
         {
-            _logger.LogError("VK API error: {Code} {Msg}", apiResp.Error.Code, apiResp.Error.Msg);
+            logger.LogError("VK API error: {Code} {Msg}", apiResp.Error.Code, apiResp.Error.Msg);
             return [];
         }
 
@@ -65,7 +56,7 @@ public class VkScraperService
             .Where(p => p._bestPhotoUrl is not null)
             .ToList();
 
-        _logger.LogInformation("VK: {Total} постов, {Photos} с фото для {Domain}",
+        logger.LogInformation("VK: {Total} постов, {Photos} с фото для {Domain}",
             posts.Count, photoPosts.Count, domain);
 
         return photoPosts;

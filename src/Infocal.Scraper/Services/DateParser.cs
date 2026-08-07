@@ -1,6 +1,4 @@
-using System.Globalization;
-
-namespace Infocal.Scraper.Services;
+﻿namespace Infocal.Scraper.Services;
 
 /// <summary>
 /// Parses Russian date strings from the Gomel hockey website.
@@ -9,18 +7,30 @@ public static class DateParser
 {
     private static readonly Dictionary<string, int> RussianMonths = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["января"] = 1,   ["январь"] = 1,
-        ["февраля"] = 2,  ["февраль"] = 2,
-        ["марта"] = 3,    ["март"] = 3,
-        ["апреля"] = 4,   ["апрель"] = 4,
-        ["мая"] = 5,      ["май"] = 5,
-        ["июня"] = 6,     ["июнь"] = 6,
-        ["июля"] = 7,     ["июль"] = 7,
-        ["августа"] = 8,  ["август"] = 8,
-        ["сентября"] = 9, ["сентябрь"] = 9,
-        ["октября"] = 10, ["октябрь"] = 10,
-        ["ноября"] = 11,  ["ноябрь"] = 11,
-        ["декабря"] = 12, ["декабрь"] = 12,
+        ["января"] = 1,
+        ["январь"] = 1,
+        ["февраля"] = 2,
+        ["февраль"] = 2,
+        ["марта"] = 3,
+        ["март"] = 3,
+        ["апреля"] = 4,
+        ["апрель"] = 4,
+        ["мая"] = 5,
+        ["май"] = 5,
+        ["июня"] = 6,
+        ["июнь"] = 6,
+        ["июля"] = 7,
+        ["июль"] = 7,
+        ["августа"] = 8,
+        ["август"] = 8,
+        ["сентября"] = 9,
+        ["сентябрь"] = 9,
+        ["октября"] = 10,
+        ["октябрь"] = 10,
+        ["ноября"] = 11,
+        ["ноябрь"] = 11,
+        ["декабря"] = 12,
+        ["декабрь"] = 12,
     };
 
     /// <summary>
@@ -66,9 +76,12 @@ public static class DateParser
         if (parenIdx >= 0) leftPart = leftPart[..parenIdx].Trim();
 
         var leftParts = leftPart.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        if (leftParts.Length < 2) return [];
-        if (!int.TryParse(leftParts[0], out var day)) return [];
-        if (!RussianMonths.TryGetValue(leftParts[1], out var month)) return [];
+        if (leftParts.Length < 2
+            || !int.TryParse(leftParts[0], out var day)
+            || !RussianMonths.TryGetValue(leftParts[1], out var month))
+        {
+            return [];
+        }
 
         // Parse right: split by comma first (handles multiple ranges), then by dash
         var ranges = rightPart.Split(',', StringSplitOptions.TrimEntries);

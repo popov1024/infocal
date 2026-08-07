@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -9,28 +9,17 @@ namespace Infocal.Scraper.Services;
 /// to extract quiz schedule information from images.
 /// Supports any OpenAI-compatible endpoint.
 /// </summary>
-public class VisionService
+public class VisionService(HttpClient http, IConfiguration config, ILogger<VisionService> logger)
 {
-    private readonly HttpClient _http;
-    private readonly ILogger<VisionService> _logger;
-    private readonly string _token;
-    private readonly string _model;
-    private readonly string _endpoint;
+    private readonly string _token = config["Vision:ApiKey"] ?? throw new InvalidOperationException("Vision:ApiKey not configured");
+    private readonly string _model = config["Vision:Model"] ?? "gpt-4o-mini";
+    private readonly string _endpoint = config["Vision:Endpoint"] ?? "https://api.openai.com/v1/chat/completions";
 
     private static readonly JsonSerializerOptions JsonOpts = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
-
-    public VisionService(HttpClient http, IConfiguration config, ILogger<VisionService> logger)
-    {
-        _http = http;
-        _logger = logger;
-        _token = config["Vision:ApiKey"] ?? throw new InvalidOperationException("Vision:ApiKey not configured");
-        _model = config["Vision:Model"] ?? "gpt-4o-mini";
-        _endpoint = config["Vision:Endpoint"] ?? "https://api.openai.com/v1/chat/completions";
-    }
 
     /// <summary>
     /// Analyzes an image and returns extracted schedule or null if it's not a schedule.
@@ -48,7 +37,7 @@ public class VisionService
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Не удалось скачать картинку: {Url}", imageUrl);
+            logger.LogWarning(ex, "Не удалось скачать картинку: {Url}", imageUrl);
             return null;
         }
 
@@ -105,11 +94,11 @@ public class VisionService
         };
         req.Headers.Add("Authorization", $"Bearer {_token}");
 
-        var resp = await _http.SendAsync(req, ct);
+        var resp = await http.SendAsync(req, ct);
         if (!resp.IsSuccessStatusCode)
         {
             var errBody = await resp.Content.ReadAsStringAsync(ct);
-            _logger.LogError("Vision API error {Status}: {Body}", (int)resp.StatusCode,
+            logger.LogError("Vision API error {Status}: {Body}", (int)resp.StatusCode,
                 errBody[..Math.Min(500, errBody.Length)]);
             return null;
         }
@@ -120,11 +109,11 @@ public class VisionService
         var responseText = result?.Choices?.FirstOrDefault()?.Message?.Content;
         if (responseText is null)
         {
-            _logger.LogWarning("Vision API вернул пустой ответ");
+            logger.LogWarning("Vision API вернул пустой ответ");
             return null;
         }
 
-        _logger.LogDebug("Vision ответ: {Text}", responseText[..Math.Min(200, responseText.Length)]);
+        logger.LogDebug("Vision ответ: {Text}", responseText[..Math.Min(200, responseText.Length)]);
 
         // Extract JSON from response (may be wrapped in markdown)
         var jsonStart = responseText.IndexOf('{');
@@ -142,7 +131,7 @@ public class VisionService
         }
         catch (JsonException ex)
         {
-            _logger.LogWarning(ex, "Не удалось разобрать ответ Vision как JSON");
+            logger.LogWarning(ex, "Не удалось разобрать ответ Vision как JSON");
             return null;
         }
     }

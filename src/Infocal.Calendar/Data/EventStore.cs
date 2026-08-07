@@ -1,4 +1,4 @@
-using Infocal.Calendar.Models;
+﻿using Infocal.Calendar.Models;
 
 namespace Infocal.Calendar.Data;
 
@@ -19,44 +19,56 @@ public class EventStore(AppDbContext db)
         if (categories is { Length: > 0 })
         {
             var slugs = await ResolveCategorySlugsAsync(categories, ct);
-            if (slugs.Count == 1)
+            switch (slugs.Count)
             {
-                var slug = slugs[0];
-                query = (IOrderedQueryable<EventItem>)query.Where(e => e.Category == slug);
-            }
-            else if (slugs.Count > 1)
-            {
-                query = (IOrderedQueryable<EventItem>)query.Where(e => slugs.Contains(e.Category));
+                case 1:
+                    {
+                        var slug = slugs[0];
+                        query = (IOrderedQueryable<EventItem>)query.Where(e => e.Category == slug);
+                        break;
+                    }
+                case > 1:
+                    query = (IOrderedQueryable<EventItem>)query.Where(e => slugs.Contains(e.Category));
+                    break;
             }
         }
 
         if (cities is { Length: > 0 })
         {
             var citySlugs = await ResolveCitySlugsAsync(cities, ct);
-            if (citySlugs.Count == 1)
+            switch (citySlugs.Count)
             {
-                var slug = citySlugs[0];
-                query = (IOrderedQueryable<EventItem>)query.Where(e => e.City == slug);
-            }
-            else if (citySlugs.Count > 1)
-            {
-                query = (IOrderedQueryable<EventItem>)query.Where(e => citySlugs.Contains(e.City));
+                case 1:
+                    {
+                        var slug = citySlugs[0];
+                        query = (IOrderedQueryable<EventItem>)query.Where(e => e.City == slug);
+                        break;
+                    }
+                case > 1:
+                    query = (IOrderedQueryable<EventItem>)query.Where(e => citySlugs.Contains(e.City));
+                    break;
             }
         }
 
-        if (types is { Length: > 0 })
+        if (types is not { Length: > 0 })
         {
-            var typeSlugs = await ResolveTypeSlugsAsync(types, ct);
-            if (typeSlugs.Count == 1)
-            {
-                var slug = typeSlugs[0];
-                query = (IOrderedQueryable<EventItem>)query.Where(e => e.Type == slug);
-            }
-            else if (typeSlugs.Count > 1)
-            {
-                query = (IOrderedQueryable<EventItem>)query.Where(e => typeSlugs.Contains(e.Type));
-            }
+            return await query.ToListAsync(ct);
         }
+
+        var typeSlugs = await ResolveTypeSlugsAsync(types, ct);
+        switch (typeSlugs.Count)
+        {
+            case 1:
+                {
+                    var slug = typeSlugs[0];
+                    query = (IOrderedQueryable<EventItem>)query.Where(e => e.Type == slug);
+                    break;
+                }
+            case > 1:
+                query = (IOrderedQueryable<EventItem>)query.Where(e => typeSlugs.Contains(e.Type));
+                break;
+        }
+
 
         return await query.ToListAsync(ct);
     }
@@ -64,33 +76,8 @@ public class EventStore(AppDbContext db)
     public async Task<EventItem?> GetByIdAsync(Guid id, CancellationToken ct = default)
         => await db.Events.AsNoTracking().FirstOrDefaultAsync(e => e.Id == id, ct);
 
-    public async Task<IReadOnlyList<string>> GetCategorySlugsAsync(string? city = null, CancellationToken ct = default)
-    {
-        var query = db.Events.AsNoTracking();
-        if (!string.IsNullOrWhiteSpace(city))
-        {
-            var citySlug = await ResolveCitySlugAsync(city, ct);
-            if (citySlug is not null)
-                query = query.Where(e => e.City == citySlug);
-        }
-
-        return await query
-            .Select(e => e.Category)
-            .Distinct()
-            .Order()
-            .ToListAsync(ct);
-    }
-
     public async Task<IReadOnlyList<CategoryEntity>> GetCategoriesAsync(CancellationToken ct = default)
         => await db.Categories.AsNoTracking().OrderBy(c => c.Name).ToListAsync(ct);
-
-    public async Task<IReadOnlyList<string>> GetCitySlugsAsync(CancellationToken ct = default)
-        => await db.Events
-            .AsNoTracking()
-            .Select(e => e.City)
-            .Distinct()
-            .Order()
-            .ToListAsync(ct);
 
     public async Task<IReadOnlyList<CityEntity>> GetCitiesAsync(CancellationToken ct = default)
         => await db.Cities.AsNoTracking().OrderBy(c => c.Name).ToListAsync(ct);
@@ -186,6 +173,7 @@ public class EventStore(AppDbContext db)
         {
             db.Categories.Add(cat);
         }
+
         await db.SaveChangesAsync(ct);
     }
 
@@ -211,6 +199,7 @@ public class EventStore(AppDbContext db)
         {
             db.Cities.Add(city);
         }
+
         await db.SaveChangesAsync(ct);
     }
 
@@ -237,6 +226,7 @@ public class EventStore(AppDbContext db)
         {
             db.Types.Add(type);
         }
+
         await db.SaveChangesAsync(ct);
     }
 
@@ -259,10 +249,9 @@ public class EventStore(AppDbContext db)
 
         // Try name match
         entity = await db.Categories.FirstOrDefaultAsync(c => c.Name == id, ct);
-        if (entity is not null) return entity.Slug;
-
-        // Not found — use the input as slug
-        return id.ToLowerInvariant().Replace(' ', '-');
+        return entity is not null
+            ? entity.Slug
+            : id.ToLowerInvariant().Replace(' ', '-');
     }
 
     private async Task<List<string>> ResolveCategorySlugsAsync(string[] ids, CancellationToken ct)
@@ -270,7 +259,7 @@ public class EventStore(AppDbContext db)
         var result = new List<string>();
         foreach (var id in ids)
             result.Add(await ResolveCategorySlugAsync(id, ct));
-        return result.Distinct().ToList();
+        return [.. result.Distinct()];
     }
 
     private async Task<List<string>> ResolveTypeSlugsAsync(string[] ids, CancellationToken ct)
@@ -287,9 +276,9 @@ public class EventStore(AppDbContext db)
         if (entity is not null) return entity.Slug;
 
         entity = await db.Cities.FirstOrDefaultAsync(c => c.Name == id, ct);
-        if (entity is not null) return entity.Slug;
-
-        return id.ToLowerInvariant().Replace(' ', '-');
+        return entity is not null
+            ? entity.Slug
+            : id.ToLowerInvariant().Replace(' ', '-');
     }
 
     private async Task<List<string>> ResolveCitySlugsAsync(string[] ids, CancellationToken ct)
@@ -297,7 +286,7 @@ public class EventStore(AppDbContext db)
         var result = new List<string>();
         foreach (var id in ids)
             result.Add(await ResolveCitySlugAsync(id, ct));
-        return result.Distinct().ToList();
+        return [.. result.Distinct()];
     }
 
     private async Task<string> GetCategoryNameAsync(string slug, CancellationToken ct)
@@ -317,8 +306,9 @@ public class EventStore(AppDbContext db)
         var entity = await db.Types.FindAsync([id], ct);
         if (entity is not null) return entity.Slug;
         entity = await db.Types.FirstOrDefaultAsync(t => t.Name == id, ct);
-        if (entity is not null) return entity.Slug;
-        return id.ToLowerInvariant().Replace(' ', '-');
+        return entity is not null
+            ? entity.Slug
+            : id.ToLowerInvariant().Replace(' ', '-');
     }
 
     private async Task<string> GetTypeNameAsync(string slug, CancellationToken ct)

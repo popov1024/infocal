@@ -1,4 +1,4 @@
-// Global using directives
+﻿// Global using directives
 
 global using Infocal.Calendar;
 global using Infocal.Calendar.Data;

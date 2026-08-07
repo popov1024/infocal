@@ -1,5 +1,5 @@
+﻿using System.Text;
 using Infocal.Calendar.Models;
-using System.Text;
 
 namespace Infocal.Calendar;
 
@@ -32,7 +32,7 @@ public static class Endpoints
             CancellationToken ct) =>
         {
             var events = await store.GetAllAsync(ct: ct);
-            var ics = cal.GenerateIcs(events, "Все события", "Календарь событий");
+            var ics = CalendarService.GenerateIcs(events, "Все события", "Календарь событий");
             return Results.Text(ics, "text/calendar; charset=utf-8");
         });
 
@@ -45,7 +45,7 @@ public static class Endpoints
             var events = await store.GetAllAsync(categories, cities, types, ct);
             var name = await BuildCalendarName(store, categories, cities, types, ct);
             var color = await GetCalendarColor(store, categories, ct);
-            var ics = cal.GenerateIcs(events, name, "Календарь событий", color);
+            var ics = CalendarService.GenerateIcs(events, name, "Календарь событий", color);
             return Results.Text(ics, "text/calendar; charset=utf-8");
         });
 

@@ -1,22 +1,13 @@
-using System.Net.Http.Json;
-using System.Text;
-using System.Text.Encodings.Web;
-using System.Text.Json;
-
-var builder = WebApplication.CreateBuilder(args);
+﻿var builder = WebApplication.CreateBuilder(args);
 var app = builder.Build();
 
 var apiBase = builder.Configuration["CalendarApi:BaseUrl"] ?? "http://localhost:5223";
 var apiKey = builder.Configuration["INFOCAL_API_KEY"] ?? "dev-key-change-me";
 
-using var http = new HttpClient
-{
-    BaseAddress = new Uri(apiBase),
-    Timeout = TimeSpan.FromSeconds(30)
-};
+using var http = new HttpClient();
+http.BaseAddress = new Uri(apiBase);
+http.Timeout = TimeSpan.FromSeconds(30);
 http.DefaultRequestHeaders.Add("X-Api-Key", apiKey);
-
-var jsonOpts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
 
 // ── List ──
 app.MapGet("/", async (CancellationToken ct) =>
@@ -152,6 +143,7 @@ app.MapPost("/types/{slug}/delete", async (string slug, CancellationToken ct) =>
 });
 
 app.Run();
+return;
 
 // ── Helpers ──
 
@@ -394,37 +386,55 @@ static string BuildTypeListPage(List<TypeDto> types, List<CatDto> cats)
 public class EventDto
 {
     public Guid Id { get; set; }
-    public string Summary { get; set; } = "";
-    public string? Description { get; set; }
-    public string? Address { get; set; }
-    public string? Category { get; set; }
-    public string? CategoryDescription { get; set; }
-    public string? Type { get; set; }
-    public string? TypeDescription { get; set; }
-    public string? City { get; set; }
-    public string? CityDescription { get; set; }
-    public DateTime Start { get; set; }
-    public DateTime End { get; set; }
-    public string? SourceUrl { get; set; }
+
+    public string Summary { get; init; } = "";
+
+    public string? Description { get; init; }
+
+    public string? Address { get; init; }
+
+    public string? Category { get; init; }
+
+    public string? CategoryDescription { get; init; }
+
+    public string? Type { get; init; }
+
+    public string? TypeDescription { get; init; }
+
+    public string? City { get; init; }
+
+    public string? CityDescription { get; init; }
+
+    public DateTime Start { get; init; }
+
+    public DateTime End { get; init; }
+
+    public string? SourceUrl { get; init; }
 }
 
 public class CatDto
 {
-    public string Slug { get; set; } = "";
-    public string Name { get; set; } = "";
-    public string? Icon { get; set; }
-    public string? Color { get; set; }
+    public string Slug { get; init; } = "";
+
+    public string Name { get; init; } = "";
+
+    public string? Icon { get; init; }
+
+    public string? Color { get; init; }
 }
 
 public class CityDto
 {
-    public string Slug { get; set; } = "";
-    public string Name { get; set; } = "";
+    public string Slug { get; init; } = "";
+
+    public string Name { get; init; } = "";
 }
 
 public class TypeDto
 {
-    public string Slug { get; set; } = "";
-    public string Name { get; set; } = "";
-    public string? CategorySlug { get; set; }
+    public string Slug { get; init; } = "";
+
+    public string Name { get; init; } = "";
+
+    public string? CategorySlug { get; init; }
 }

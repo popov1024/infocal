@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -8,25 +8,20 @@ namespace Infocal.Scraper.Services;
 /// Scrapes MozgoBoynya (Мозгобойня) schedule from mzgb.by city subdomains.
 /// Gets a session cookie + XSRF token, then calls /api/load-data.
 /// </summary>
-public class MozgoBoynyaScraperService
+public class MozgoBoynyaScraperService(
+    HttpClient http,
+    IConfiguration config,
+    ILogger<MozgoBoynyaScraperService> logger)
 {
-    private readonly HttpClient _http;
-    private readonly ILogger<MozgoBoynyaScraperService> _logger;
+    private readonly HttpClient _http = http;
 
-    private readonly string _cityUrl; // e.g. https://gom.mzgb.by
+    private readonly string _cityUrl = config["MozgoBoynya:CityUrl"] ?? "https://gom.mzgb.by"; // e.g. https://gom.mzgb.by
 
     private static readonly JsonSerializerOptions JsonOpts = new()
     {
         PropertyNameCaseInsensitive = true,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
-
-    public MozgoBoynyaScraperService(HttpClient http, IConfiguration config, ILogger<MozgoBoynyaScraperService> logger)
-    {
-        _http = http;
-        _logger = logger;
-        _cityUrl = config["MozgoBoynya:CityUrl"] ?? "https://gom.mzgb.by";
-    }
 
     /// <summary>
     /// Gets upcoming games for the configured city.
@@ -35,7 +30,7 @@ public class MozgoBoynyaScraperService
     public async Task<IReadOnlyList<MzgbGame>> GetScheduleAsync(CancellationToken ct = default)
     {
         // Step 1: get a fresh session + XSRF token by visiting the home page
-        _logger.LogInformation("Получение сессии с {Url}...", _cityUrl);
+        logger.LogInformation("Получение сессии с {Url}...", _cityUrl);
 
         var sessionCookies = new CookieContainer();
         string? xsrfToken = null;
@@ -56,13 +51,13 @@ public class MozgoBoynyaScraperService
                 if (cookie.Name == "XSRF-TOKEN")
                 {
                     xsrfToken = Uri.UnescapeDataString(cookie.Value);
-                    _logger.LogDebug("XSRF-TOKEN получен");
+                    logger.LogDebug("XSRF-TOKEN получен");
                 }
             }
 
             if (xsrfToken is null)
             {
-                _logger.LogWarning("XSRF-TOKEN не найден в cookies");
+                logger.LogWarning("XSRF-TOKEN не найден в cookies");
                 return [];
             }
 
@@ -82,7 +77,7 @@ public class MozgoBoynyaScraperService
 
             if (data is null)
             {
-                _logger.LogWarning("Не удалось десериализовать ответ load-data");
+                logger.LogWarning("Не удалось десериализовать ответ load-data");
                 return [];
             }
 
@@ -92,7 +87,7 @@ public class MozgoBoynyaScraperService
             if (data.CommonGames is { Count: > 0 })
                 allGames.AddRange(data.CommonGames);
 
-            _logger.LogInformation("Найдено {Count} игр Мозгобойни ({Upcoming} upcoming, {Common} common)",
+            logger.LogInformation("Найдено {Count} игр Мозгобойни ({Upcoming} upcoming, {Common} common)",
                 allGames.Count,
                 data.UpcomingGames?.Count ?? 0,
                 data.CommonGames?.Count ?? 0);

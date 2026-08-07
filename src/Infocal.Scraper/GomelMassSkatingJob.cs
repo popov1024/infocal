@@ -1,8 +1,6 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Infocal.Scraper.Services;
-using Quartz;
 
 namespace Infocal.Scraper;
 
@@ -11,11 +9,13 @@ namespace Infocal.Scraper;
 /// and pushes events to the Calendar API.
 /// Deduplicates via Calendar API: deletes old events by source URL before pushing new ones.
 /// </summary>
-public class GomelMassSkatingJob : IJob
+public class GomelMassSkatingJob(
+    GomelMassSkatingScraperService scraper,
+    IHttpClientFactory httpFactory,
+    ILogger<GomelMassSkatingJob> logger)
+    : IJob
 {
-    private readonly GomelMassSkatingScraperService _scraper;
-    private readonly HttpClient _apiHttp;
-    private readonly ILogger<GomelMassSkatingJob> _logger;
+    private readonly HttpClient _apiHttp = httpFactory.CreateClient("CalendarApi");
 
     private static readonly JsonSerializerOptions JsonOpts = new()
     {
@@ -23,35 +23,28 @@ public class GomelMassSkatingJob : IJob
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 
-    public GomelMassSkatingJob(GomelMassSkatingScraperService scraper, IHttpClientFactory httpFactory, ILogger<GomelMassSkatingJob> logger)
-    {
-        _scraper = scraper;
-        _apiHttp = httpFactory.CreateClient("CalendarApi");
-        _logger = logger;
-    }
-
     public async Task Execute(IJobExecutionContext context)
     {
-        _logger.LogInformation("🔍 Поиск расписания массовых катаний Гомельского ледового дворца...");
+        logger.LogInformation("🔍 Поиск расписания массовых катаний Гомельского ледового дворца...");
 
         try
         {
             // Step 1: discover the latest schedule post URL
-            var posts = await _scraper.DiscoverSchedulePostsAsync(context.CancellationToken);
+            var posts = await scraper.DiscoverSchedulePostsAsync(context.CancellationToken);
             if (posts.Count == 0)
             {
-                _logger.LogInformation("⏳ Расписание ещё не опубликовано");
+                logger.LogInformation("⏳ Расписание ещё не опубликовано");
                 return;
             }
 
             var (url, title) = posts[0];
-            _logger.LogInformation("📄 Новый пост: {Title} ({Url})", title, url);
+            logger.LogInformation("📄 Новый пост: {Title} ({Url})", title, url);
 
             // Step 2: parse
-            var events = await _scraper.ParseSchedulePostAsync(url, context.CancellationToken);
+            var events = await scraper.ParseSchedulePostAsync(url, context.CancellationToken);
             if (events.Count == 0)
             {
-                _logger.LogWarning("❌ Не удалось извлечь события из поста");
+                logger.LogWarning("❌ Не удалось извлечь события из поста");
                 return;
             }
 
@@ -63,7 +56,7 @@ public class GomelMassSkatingJob : IJob
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "⚠️  Не удалось удалить старые события");
+                logger.LogWarning(ex, "⚠️  Не удалось удалить старые события");
             }
 
             // Step 4: push events (upsert handles dedup)
@@ -96,31 +89,31 @@ public class GomelMassSkatingJob : IJob
                     if (resp.IsSuccessStatusCode)
                     {
                         pushed++;
-                        _logger.LogInformation("   ✅ {Date:dd.MM HH:mm}-{End:HH:mm}", ev.Start, ev.End);
+                        logger.LogInformation("   ✅ {Date:dd.MM HH:mm}-{End:HH:mm}", ev.Start, ev.End);
                     }
                     else
                     {
                         failed++;
                         var body = await resp.Content.ReadAsStringAsync(context.CancellationToken);
-                        _logger.LogWarning("   ❌ {Date:dd.MM HH:mm} — HTTP {Status}: {Body}",
+                        logger.LogWarning("   ❌ {Date:dd.MM HH:mm} — HTTP {Status}: {Body}",
                             ev.Start, (int)resp.StatusCode, body);
                     }
                 }
                 catch (Exception ex)
                 {
                     failed++;
-                    _logger.LogWarning(ex, "   ⚡ {Date:dd.MM HH:mm} — ошибка сети", ev.Start);
+                    logger.LogWarning(ex, "   ⚡ {Date:dd.MM HH:mm} — ошибка сети", ev.Start);
                 }
             }
 
             if (pushed > 0)
-                _logger.LogInformation("🎉 Готово! {Pushed}/{Total} отправлено, {Failed} ошибок", pushed, events.Count, failed);
+                logger.LogInformation("🎉 Готово! {Pushed}/{Total} отправлено, {Failed} ошибок", pushed, events.Count, failed);
             else
-                _logger.LogWarning("⚠️  Ни одно событие не отправлено ({Failed} ошибок). Будет повторная попытка по расписанию.", failed);
+                logger.LogWarning("⚠️  Ни одно событие не отправлено ({Failed} ошибок). Будет повторная попытка по расписанию.", failed);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Ошибка при скрапинге");
+            logger.LogError(ex, "Ошибка при скрапинге");
         }
     }
 }

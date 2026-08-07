@@ -1,5 +1,4 @@
-using Ical.Net;
-using Ical.Net.DataTypes;
+﻿using Ical.Net.DataTypes;
 using Ical.Net.Serialization;
 using Infocal.Calendar.Models;
 
@@ -7,7 +6,7 @@ namespace Infocal.Calendar.Services;
 
 public class CalendarService
 {
-    public string GenerateIcs(
+    public static string GenerateIcs(
         IReadOnlyList<EventItem> events,
         string calendarName,
         string? description = null,
@@ -32,7 +31,7 @@ public class CalendarService
 
         foreach (var ev in events)
         {
-            var desc = ev.Description ?? "";
+            var desc = ev.Description;
             if (!string.IsNullOrWhiteSpace(ev.SourceUrl))
             {
                 if (desc.Length > 0)
@@ -45,9 +44,10 @@ public class CalendarService
                 Uid = ev.Id.ToString(),
                 Summary = ev.Summary,
                 Description = desc.Length > 0 ? desc : null,
-                Location = ev.CityDescription != null && ev.Address != null
+                Location = !string.IsNullOrEmpty(ev.CityDescription)
+                    && !string.IsNullOrEmpty(ev.Address)
                     ? $"{ev.CityDescription}, {ev.Address}"
-                    : ev.CityDescription ?? ev.Address ?? "",
+                    : ev.CityDescription,
                 DtStamp = new CalDateTime(DateTime.UtcNow)
             };
 
@@ -73,16 +73,4 @@ public class CalendarService
         var serializer = new CalendarSerializer();
         return serializer.SerializeToString(calendar) ?? string.Empty;
     }
-
-    /// <summary>
-    /// Category → color mapping for visual distinction in Calendar apps.
-    /// </summary>
-    public static string GetCategoryColor(string category) =>
-        SlugMap.GetCategoryColor(category);
-
-    /// <summary>
-    /// Category → icon emoji for display on the landing page.
-    /// </summary>
-    public static string GetCategoryIcon(string category) =>
-        SlugMap.GetCategoryIcon(category);
 }

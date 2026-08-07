@@ -1,9 +1,4 @@
-using Infocal.Scraper;
-using Infocal.Scraper.Services;
-using Microsoft.Extensions.Hosting;
-using Quartz;
-
-var host = Host.CreateDefaultBuilder(args)
+﻿var host = Host.CreateDefaultBuilder(args)
     .ConfigureServices((ctx, services) =>
     {
         var cfg = ctx.Configuration;
@@ -51,7 +46,7 @@ var host = Host.CreateDefaultBuilder(args)
 
         // ── Quartz ──
         var aggressiveCron = cfg["ScrapeSchedule:AggressiveCron"] ?? "0 */30 * ? * SAT,SUN,MON";
-        var lazyCron       = cfg["ScrapeSchedule:LazyCron"]       ?? "0 0 10 ? * TUE,WED,THU,FRI";
+        var lazyCron = cfg["ScrapeSchedule:LazyCron"] ?? "0 0 10 ? * TUE,WED,THU,FRI";
 
         services.AddQuartz(q =>
         {

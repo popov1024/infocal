@@ -1,8 +1,6 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Infocal.Scraper.Services;
-using Quartz;
 
 namespace Infocal.Scraper;
 

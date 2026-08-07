@@ -1,4 +1,4 @@
-namespace Infocal.Calendar.Models;
+﻿namespace Infocal.Calendar.Models;
 
 /// <summary>
 /// Event type (subcategory) reference entity. Slug is the primary key.
@@ -6,8 +6,11 @@ namespace Infocal.Calendar.Models;
 /// </summary>
 public class TypeEntity
 {
-    public string Slug { get; set; } = "";
+    public string Slug { get; init; } = "";
+
     public string Name { get; set; } = "";
+
     public string CategorySlug { get; set; } = "";
-    public CategoryEntity Category { get; set; } = null!;
-} 
+
+    public CategoryEntity Category { get; init; } = null!;
+}

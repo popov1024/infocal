@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace Infocal.Scraper.Services;
@@ -7,11 +7,8 @@ namespace Infocal.Scraper.Services;
 /// Scrapes WowQuiz schedule from api.etowow.ru.
 /// Filters games for a specific franchise (city).
 /// </summary>
-public class WowQuizScraperService
+public class WowQuizScraperService(HttpClient http, ILogger<WowQuizScraperService> logger)
 {
-    private readonly HttpClient _http;
-    private readonly ILogger<WowQuizScraperService> _logger;
-
     private const string ApiBase = "https://api.etowow.ru";
     private const string Domain = "https://gomel.wowquiz.ru";
 
@@ -20,12 +17,6 @@ public class WowQuizScraperService
         PropertyNameCaseInsensitive = true,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
-
-    public WowQuizScraperService(HttpClient http, ILogger<WowQuizScraperService> logger)
-    {
-        _http = http;
-        _logger = logger;
-    }
 
     public async Task<IReadOnlyList<QuizGame>> GetScheduleAsync(CancellationToken ct = default)
     {
@@ -38,22 +29,22 @@ public class WowQuizScraperService
         while (page <= totalPages)
         {
             var url = $"{ApiBase}/games/all?upcoming=1&page={page}&domain={domainEncoded}";
-            _logger.LogDebug("Загрузка {Url}", url);
+            logger.LogDebug("Загрузка {Url}", url);
 
             HttpResponseMessage resp;
             try
             {
-                resp = await _http.GetAsync(url, ct);
+                resp = await http.GetAsync(url, ct);
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Ошибка запроса к API WowQuiz");
+                logger.LogWarning(ex, "Ошибка запроса к API WowQuiz");
                 break;
             }
 
             if (!resp.IsSuccessStatusCode)
             {
-                _logger.LogWarning("WowQuiz API вернул {Status}", (int)resp.StatusCode);
+                logger.LogWarning("WowQuiz API вернул {Status}", (int)resp.StatusCode);
                 break;
             }
 
@@ -68,7 +59,7 @@ public class WowQuizScraperService
             page++;
         }
 
-        _logger.LogInformation("Найдено {Count} предстоящих игр WowQuiz для Гомеля", allGames.Count);
+        logger.LogInformation("Найдено {Count} предстоящих игр WowQuiz для Гомеля", allGames.Count);
         return allGames;
     }
 }

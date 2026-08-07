@@ -1,11 +1,9 @@
-using Infocal.Calendar.Models;
+﻿using Infocal.Calendar.Models;
 
 namespace Infocal.Calendar.Data;
 
-public class AppDbContext : DbContext
+public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
-    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
-
     public DbSet<EventItem> Events => Set<EventItem>();
     public DbSet<CategoryEntity> Categories => Set<CategoryEntity>();
     public DbSet<CityEntity> Cities => Set<CityEntity>();
