@@ -192,7 +192,7 @@ public static class Endpoints
             if (values is null) break;
 
             // Values may be comma or underscore separated
-            var slugs = values.Split(new[] { ',', '_' }, StringSplitOptions.RemoveEmptyEntries)
+            var slugs = values.Split([',', '_'], StringSplitOptions.RemoveEmptyEntries)
                 .Select(s => s.Trim().ToLowerInvariant())
                 .Where(s => s.Length > 0)
                 .ToArray();
@@ -218,8 +218,8 @@ public static class Endpoints
 
         return (
             cities.Count > 0 ? cities.ToArray() : null,
-            categories.Count > 0 ? categories.ToArray() : null,
-            types.Count > 0 ? types.ToArray() : null
+            categories.Count > 0 ? [.. categories] : null,
+            types.Count > 0 ? [.. types] : null
         );
     }
 
@@ -401,9 +401,9 @@ public static class Endpoints
         return sb.ToString();
     }
 
-    private static RouteHandlerBuilder RequireApiKey(this RouteHandlerBuilder builder, string expectedKey)
+    private static void RequireApiKey(this RouteHandlerBuilder builder, string expectedKey)
     {
-        return builder.AddEndpointFilter(async (context, next) =>
+        builder.AddEndpointFilter(async (context, next) =>
         {
             var request = context.HttpContext.Request;
             var providedKey = request.Headers["X-Api-Key"].FirstOrDefault();
