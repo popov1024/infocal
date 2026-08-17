@@ -31,7 +31,8 @@ public static class Endpoints
             EventStore store, CalendarService cal,
             CancellationToken ct) =>
         {
-            var events = await store.GetAllAsync(ct: ct);
+            var from = DateTime.Today.AddDays(-1); // yesterday, today and upcoming
+            var events = await store.GetAllAsync(from: from, ct: ct);
             var ics = CalendarService.GenerateIcs(events, "Все события", "Календарь событий");
             return Results.Text(ics, "text/calendar; charset=utf-8");
         });
@@ -42,7 +43,8 @@ public static class Endpoints
             CancellationToken ct) =>
         {
             var (cities, categories, types) = ParseCalendarPath(rest);
-            var events = await store.GetAllAsync(categories, cities, types, ct);
+            var from = DateTime.Today.AddDays(-1); // yesterday, today and upcoming
+            var events = await store.GetAllAsync(categories, cities, types, from, ct);
             var name = await BuildCalendarName(store, categories, cities, types, ct);
             var color = await GetCalendarColor(store, categories, ct);
             var ics = CalendarService.GenerateIcs(events, name, "Календарь событий", color);
@@ -51,7 +53,7 @@ public static class Endpoints
 
         // ── JSON API ──
         app.MapGet("/events", async (EventStore store, string[]? category, string[]? city, string[]? type, CancellationToken ct) =>
-            Results.Ok(await store.GetAllAsync(category, city, type, ct)));
+            Results.Ok(await store.GetAllAsync(category, city, type, ct: ct)));
 
         app.MapGet("/events/{id:guid}", async (EventStore store, Guid id, CancellationToken ct) =>
         {

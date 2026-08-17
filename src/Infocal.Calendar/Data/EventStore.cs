@@ -12,9 +12,13 @@ public class EventStore(AppDbContext db)
     // ── Read ──
 
     public async Task<IReadOnlyList<EventItem>> GetAllAsync(
-        string[]? categories = null, string[]? cities = null, string[]? types = null, CancellationToken ct = default)
+        string[]? categories = null, string[]? cities = null, string[]? types = null,
+        DateTime? from = null, CancellationToken ct = default)
     {
         var query = db.Events.AsNoTracking().OrderBy(e => e.Start);
+
+        if (from is not null)
+            query = (IOrderedQueryable<EventItem>)query.Where(e => e.Start >= from);
 
         if (categories is { Length: > 0 })
         {
