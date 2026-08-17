@@ -61,8 +61,8 @@ public class MozgoBoynyaJob : IJob
             {
                 try
                 {
-                    var start = game.GetStartUtc();
-                    var end = game.GetEndUtc();
+                    var start = game.GetStartLocal();
+                    var end = game.GetEndLocal();
 
                     if (start is null)
                     {

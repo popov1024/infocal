@@ -160,8 +160,13 @@ public class MzgbGame
     [JsonPropertyName("game")]
     public MzgbGameInfo? Game { get; set; }
 
-    /// <summary>TryParse calendar_date (YYYYMMDD) + calendar_time_start (HHmm) into DateTime (Minsk timezone).</summary>
-    public DateTime? GetStartUtc()
+    /// <summary>
+    /// Parses calendar_date (YYYYMMDD) + calendar_time_start (HHmm) into the wall-clock
+    /// time published on the site. The site shows Minsk time (UTC+3) without an offset,
+    /// so we keep it as an unspecified floating local time — exactly like the other
+    /// scrapers — and do not convert it to UTC.
+    /// </summary>
+    public DateTime? GetStartLocal()
     {
         if (CalendarDate.Length != 8) return null;
         if (!int.TryParse(CalendarDate[..4], out var y)) return null;
@@ -190,20 +195,18 @@ public class MzgbGame
 
         try
         {
-            var tz = TimeZoneInfo.FindSystemTimeZoneById("Europe/Minsk");
-            var unspecified = new DateTime(y, m, d, hour, min, 0, DateTimeKind.Unspecified);
-            return TimeZoneInfo.ConvertTimeToUtc(unspecified, tz);
+            return new DateTime(y, m, d, hour, min, 0, DateTimeKind.Unspecified);
         }
         catch
         {
-            return new DateTime(y, m, d, hour, min, 0, DateTimeKind.Utc).AddHours(-3);
+            return null;
         }
     }
 
-    /// <summary>TryParse end time, or fall back to start + 2h.</summary>
-    public DateTime? GetEndUtc()
+    /// <summary>Parses the end wall-clock time, or falls back to start + 2h.</summary>
+    public DateTime? GetEndLocal()
     {
-        var start = GetStartUtc();
+        var start = GetStartLocal();
         if (start is null) return null;
 
         // calendar_time_end is HHmm format, e.g. "2100"
@@ -214,11 +217,9 @@ public class MzgbGame
             {
                 try
                 {
-                    var tz = TimeZoneInfo.FindSystemTimeZoneById("Europe/Minsk");
                     var endLocal = new DateTime(start.Value.Year, start.Value.Month, start.Value.Day, h, m, 0, DateTimeKind.Unspecified);
-                    var endUtc = TimeZoneInfo.ConvertTimeToUtc(endLocal, tz);
-                    if (endUtc < start) endUtc = endUtc.AddDays(1);
-                    return endUtc;
+                    if (endLocal < start) endLocal = endLocal.AddDays(1);
+                    return endLocal;
                 }
                 catch
                 {
