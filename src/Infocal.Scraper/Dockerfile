@@ -1,5 +1,5 @@
 # ── Build stage ──
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:11.0 AS build
 WORKDIR /src
 
 # Restore
@@ -11,7 +11,7 @@ COPY src/Infocal.Scraper/ src/Infocal.Scraper/
 RUN dotnet publish src/Infocal.Scraper/Infocal.Scraper.csproj -c Release -o /app
 
 # ── Runtime stage ──
-FROM mcr.microsoft.com/dotnet/runtime:10.0
+FROM mcr.microsoft.com/dotnet/runtime:11.0
 WORKDIR /app
 
 # Volume for future state persistence

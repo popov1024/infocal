@@ -1,5 +1,5 @@
 # ── Build stage ──
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:11.0 AS build
 WORKDIR /src
 
 # Restore
@@ -11,7 +11,7 @@ COPY src/Infocal.Calendar/ src/Infocal.Calendar/
 RUN dotnet publish src/Infocal.Calendar/Infocal.Calendar.csproj -c Release -o /app
 
 # ── Runtime stage ──
-FROM mcr.microsoft.com/dotnet/aspnet:10.0
+FROM mcr.microsoft.com/dotnet/aspnet:11.0
 WORKDIR /app
 
 # Persist SQLite database
