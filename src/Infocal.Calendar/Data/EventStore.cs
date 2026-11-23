@@ -260,7 +260,7 @@ public class EventStore(AppDbContext db)
 
     private async Task<List<string>> ResolveCategorySlugsAsync(string[] ids, CancellationToken ct)
     {
-        var result = new List<string>();
+        List<string> result = [with(capacity: ids.Length)];
         foreach (var id in ids)
             result.Add(await ResolveCategorySlugAsync(id, ct));
         return [.. result.Distinct()];
@@ -268,7 +268,7 @@ public class EventStore(AppDbContext db)
 
     private async Task<List<string>> ResolveTypeSlugsAsync(string[] ids, CancellationToken ct)
     {
-        var result = new List<string>();
+        List<string> result = [with(capacity: ids.Length)];
         foreach (var id in ids)
             result.Add(await ResolveTypeSlugAsync(id, ct));
         return result.Distinct().ToList();
@@ -287,7 +287,7 @@ public class EventStore(AppDbContext db)
 
     private async Task<List<string>> ResolveCitySlugsAsync(string[] ids, CancellationToken ct)
     {
-        var result = new List<string>();
+        List<string> result = [with(capacity: ids.Length)];
         foreach (var id in ids)
             result.Add(await ResolveCitySlugAsync(id, ct));
         return [.. result.Distinct()];

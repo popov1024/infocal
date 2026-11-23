@@ -133,7 +133,7 @@ public static class Endpoints
     private static async Task<string> BuildCalendarName(
         EventStore store, string[]? categorySlugs, string[]? citySlugs, string[]? typeSlugs, CancellationToken ct)
     {
-        var parts = new List<string>();
+        List<string> parts = [with(capacity: 3)];
 
         if (citySlugs is { Length: > 0 })
         {
@@ -180,9 +180,9 @@ public static class Endpoints
             rest = rest[..^4];
 
         var segments = rest.Split('/', StringSplitOptions.RemoveEmptyEntries);
-        var cities = new List<string>();
-        var categories = new List<string>();
-        var types = new List<string>();
+        List<string> cities = [with(capacity: segments.Length)];
+        List<string> categories = [with(capacity: segments.Length)];
+        List<string> types = [with(capacity: segments.Length)];
 
         for (var i = 0; i < segments.Length; i++)
         {
