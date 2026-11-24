@@ -186,7 +186,7 @@ public class SmuziQuizScraperService(
                 continue;
             }
 
-            var month = MonthFromName(match.Groups[2].Value);
+            var month = DateParser.MonthFromName(match.Groups[2].Value);
             if (month is null)
             {
                 logger.LogWarning("Смузи: неизвестный месяц в заголовке «{Title}»", rawTitle);
@@ -255,29 +255,6 @@ public class SmuziQuizScraperService(
                && int.TryParse(parts[1], out minute)
                && hour is >= 0 and < 24
                && minute is >= 0 and < 60;
-    }
-
-    private static int? MonthFromName(string name)
-    {
-        if (name.Length < 3)
-            return null;
-
-        return name[..3].ToLowerInvariant() switch
-        {
-            "янв" => 1,
-            "фев" => 2,
-            "мар" => 3,
-            "апр" => 4,
-            "май" or "мая" => 5,
-            "июн" => 6,
-            "июл" => 7,
-            "авг" => 8,
-            "сен" => 9,
-            "окт" => 10,
-            "ноя" => 11,
-            "дек" => 12,
-            _ => null
-        };
     }
 
     private static string ExtractVenue(List<SmuziCharacteristic> characteristics, string fallback)

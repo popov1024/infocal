@@ -34,6 +34,33 @@ public static class DateParser
     };
 
     /// <summary>
+    /// Разбирает название месяца по первым трём буквам: «ноября», «ноя», «Ноябрь».
+    /// </summary>
+    public static int? MonthFromName(string name)
+    {
+        name = name.Trim();
+        if (name.Length < 3)
+            return null;
+
+        return name[..3].ToLowerInvariant() switch
+        {
+            "янв" => 1,
+            "фев" => 2,
+            "мар" => 3,
+            "апр" => 4,
+            "май" or "мая" => 5,
+            "июн" => 6,
+            "июл" => 7,
+            "авг" => 8,
+            "сен" => 9,
+            "окт" => 10,
+            "ноя" => 11,
+            "дек" => 12,
+            _ => null
+        };
+    }
+
+    /// <summary>
     /// Parse a full date like "29 июня 2026" → DateTime
     /// </summary>
     public static DateTime? ParseFullDate(ReadOnlySpan<char> text)

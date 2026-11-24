@@ -20,12 +20,12 @@ public class VkScraperService(HttpClient http, IConfiguration config, ILogger<Vk
     };
 
     /// <summary>
-    /// Returns recent wall posts with photo attachments for a VK domain.
+    /// Returns recent wall posts for a VK domain, without attachment filtering.
     /// </summary>
-    public async Task<IReadOnlyList<VkPost>> GetPhotoPostsAsync(string domain, int count = 10, CancellationToken ct = default)
+    public async Task<IReadOnlyList<VkPost>> GetPostsAsync(string domain, int count = 10, CancellationToken ct = default)
     {
         var url = $"{ApiBase}/wall.get?domain={domain}&count={count}&v={ApiVersion}&access_token={_token}";
-        logger.LogDebug("VK API: {Url}", url);
+        logger.LogDebug("VK API: wall.get {Domain}, {Count} постов", domain, count);
 
         var resp = await http.GetAsync(url, ct);
         resp.EnsureSuccessStatusCode();
@@ -39,7 +39,16 @@ public class VkScraperService(HttpClient http, IConfiguration config, ILogger<Vk
             return [];
         }
 
-        var posts = apiResp?.Response?.Items ?? [];
+        return apiResp?.Response?.Items ?? [];
+    }
+
+    /// <summary>
+    /// Returns recent wall posts with photo attachments for a VK domain.
+    /// </summary>
+    public async Task<IReadOnlyList<VkPost>> GetPhotoPostsAsync(string domain, int count = 10, CancellationToken ct = default)
+    {
+        var posts = await GetPostsAsync(domain, count, ct);
+
         var photoPosts = posts
             .Where(p => p.Attachments?.Any(a => a.Type == "photo") == true)
             .Select(p =>

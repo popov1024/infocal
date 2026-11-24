@@ -48,6 +48,9 @@ var host = Host.CreateDefaultBuilder(args)
             client.Timeout = TimeSpan.FromSeconds(60);
         });
 
+        // Разбор текстовых постов VK: своего HttpClient нет, ходит через VkScraperService
+        services.AddTransient<UmaparkQuizScraperService>();
+
         services.AddHttpClient<MozgoBoynyaScraperService>(client =>
         {
             // BaseAddress is overridden per-request (uses the city URL from config)
@@ -112,6 +115,19 @@ var host = Host.CreateDefaultBuilder(args)
                     .WithDescription("Ежедневно в 9:00 — проверка расписания квизов Смузи"));
             }
 
+            // ── УмаПарк ──
+            if (JobEnabled("UmaparkQuizJob"))
+            {
+                var umaparkKey = new JobKey("UmaparkQuizJob");
+                q.AddJob<UmaparkQuizJob>(opts => opts.WithIdentity(umaparkKey));
+
+                q.AddTrigger(opts => opts
+                    .ForJob(umaparkKey)
+                    .WithIdentity("UmaparkQuizDailyTrigger")
+                    .WithCronSchedule("0 0 9 * * ?")
+                    .WithDescription("Ежедневно в 9:00 — проверка расписания квизов УмаПарк"));
+            }
+
             // ── MozgoBoynya ──
             if (JobEnabled("MozgoBoynyaJob"))
             {
@@ -165,6 +181,8 @@ if (JobEnabled("SmuziQuizJob"))
     await scheduler.TriggerJob(new JobKey("SmuziQuizJob"));
 if (JobEnabled("MozgoBoynyaJob"))
     await scheduler.TriggerJob(new JobKey("MozgoBoynyaJob"));
+if (JobEnabled("UmaparkQuizJob"))
+    await scheduler.TriggerJob(new JobKey("UmaparkQuizJob"));
 if (JobEnabled("VkImageScheduleJob"))
     await scheduler.TriggerJob(new JobKey("VkImageScheduleJob"));
 
