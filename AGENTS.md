@@ -73,7 +73,7 @@ Quartz-джобы: `GomelMassSkatingJob` (агрессивный и ленивы
 пер-событийный (`…/admin/tproduct/<uid>-<slug>`), поэтому синхронизация двухфазная:
 прочитать `/events?type=smuzi`, удалить устаревшие и перенесённые по `by-source`, затем
 upsert. Если страница/API не разобрались или карточек 0 — джоб **ничего не удаляет**.
-Соответствие полей: `title` → summary, `descr` → description, площадка + адрес из
+Соответствие полей: `«Смузи: » + title` → summary (префикс источника, как у «ВАУ КВИЗ:»), `descr` → description, площадка + адрес из
 `characteristics`/`json_options` → address (в Calendar нет поля venue).
 
 Локальный прогон одного источника: `ScrapeSchedule:OnlyJobs` (CSV JobKey, пусто = все).

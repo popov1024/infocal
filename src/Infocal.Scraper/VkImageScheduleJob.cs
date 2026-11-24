@@ -23,8 +23,15 @@ public class VkImageScheduleJob : IJob
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 
+    private static readonly JsonSerializerOptions ReadOpts = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
+
     private sealed record VkSource(
         string Domain, string Category, string City, string Type, string TypeDescription);
+
+    private sealed record ExistingEvent(string? SourceUrl, DateTime Start);
 
     // VK pages that publish their schedule as images
     private static readonly VkSource[] Sources =
@@ -60,9 +67,16 @@ public class VkImageScheduleJob : IJob
                 var sourceUrl = $"https://vk.com/{source.Domain}";
                 int pushed = 0, failed = 0, skipped = 0;
 
+                // Разовая уборка: группы событий, целиком ушедшие в прошлое
+                var cleaned = await DeleteFullyPastGroupsAsync(
+                    source.Type, source.Domain, context.CancellationToken);
+
                 foreach (var post in posts)
                 {
                     if (post._bestPhotoUrl is null) continue;
+
+                    // Год на афишах не печатают — считаем его от даты публикации
+                    var postDate = DateTimeOffset.FromUnixTimeSeconds(post.DateUnix).LocalDateTime;
 
                     // Step 1: Ask DeepSeek Vision if this is a schedule
                     var extracted = await _vision.AnalyzeImageAsync(
@@ -90,7 +104,7 @@ public class VkImageScheduleJob : IJob
                     {
                         try
                         {
-                            if (!TryParseDateTime(game.Date, game.Time, out var start))
+                            if (!TryParseDateTime(game.Date, game.Time, postDate, out var start))
                             {
                                 _logger.LogWarning("   ⚠️ Невалидная дата: {Date} {Time}", game.Date, game.Time);
                                 failed++;
@@ -100,6 +114,14 @@ public class VkImageScheduleJob : IJob
                             var title = string.IsNullOrWhiteSpace(game.Title)
                                 ? source.TypeDescription
                                 : game.Title;
+
+                            if (start < DateTime.Today)
+                            {
+                                skipped++;
+                                _logger.LogDebug("   ⏭️ Прошедшая игра пропущена: {Date:dd.MM.yyyy HH:mm} {Title}",
+                                    start, title);
+                                continue;
+                            }
 
                             var payload = new
                             {
@@ -141,8 +163,8 @@ public class VkImageScheduleJob : IJob
                     }
                 }
 
-                _logger.LogInformation("🎉 VK {Domain}: {Pushed} отправлено, {Failed} ошибок, {Skipped} пропущено",
-                    source.Domain, pushed, failed, skipped);
+                _logger.LogInformation("🎉 VK {Domain}: {Pushed} отправлено, {Failed} ошибок, {Skipped} пропущено, {Cleaned} устаревших удалено",
+                    source.Domain, pushed, failed, skipped, cleaned);
             }
             catch (Exception ex)
             {
@@ -151,7 +173,14 @@ public class VkImageScheduleJob : IJob
         }
     }
 
-    private static bool TryParseDateTime(string? date, string? time, out DateTime result)
+    // ── Разбор дат ──
+
+    /// <summary>
+    /// Разбирает дату и время из ответа Vision. Года в тексте поста и на афише нет,
+    /// поэтому он берётся от даты публикации: если месяц игры ещё не наступил на момент
+    /// поста, значит речь про следующий год.
+    /// </summary>
+    private bool TryParseDateTime(string? date, string? time, DateTime postDate, out DateTime result)
     {
         result = default;
         if (string.IsNullOrWhiteSpace(date)) return false;
@@ -159,11 +188,93 @@ public class VkImageScheduleJob : IJob
         var dt = date.Trim();
         var tm = time?.Trim() ?? "19:00";
 
-        if (DateTime.TryParse($"{dt} {tm}", out result))
-            return true;
-        if (DateTime.TryParse($"{dt}T{tm}:00", out result))
-            return true;
+        if (!DateTime.TryParse($"{dt} {tm}", out result) && !DateTime.TryParse($"{dt}T{tm}:00", out result))
+            return false;
 
-        return false;
+        var expectedYear = postDate.Year;
+        if (result.Month < postDate.Month) expectedYear++;
+
+        if (result.Year == expectedYear) return true;
+
+        try
+        {
+            var fixedDate = new DateTime(expectedYear, result.Month, result.Day, result.Hour, result.Minute,
+                0, DateTimeKind.Unspecified);
+            _logger.LogInformation("   📅 Год исправлен: {Raw} → {Fixed} (пост от {PostDate:dd.MM.yyyy})",
+                result.ToString("yyyy-MM-dd"), fixedDate.ToString("yyyy-MM-dd"), postDate);
+            result = fixedDate;
+        }
+        catch (ArgumentOutOfRangeException)
+        {
+            _logger.LogWarning("   ⚠️ Год не исправлен: {Raw} → {Year} (несуществующая дата)",
+                result.ToString("yyyy-MM-dd"), expectedYear);
+        }
+
+        return true;
+    }
+
+    // ── Уборка прошедших событий ──
+
+    /// <summary>
+    /// Разовая уборка: удаляет группы событий (по одному sourceUrl),
+    /// у которых все начала раньше сегодняшнего дня. Сбой уборки не блокирует публикацию.
+    /// Возвращает число удалённых групп.
+    /// </summary>
+    private async Task<int> DeleteFullyPastGroupsAsync(string type, string domainPrefix, CancellationToken ct)
+    {
+        var cleaned = 0;
+
+        try
+        {
+            using var resp = await _apiHttp.GetAsync($"/events?type={Uri.EscapeDataString(type)}", ct);
+            if (!resp.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("VK {Domain}: не удалось прочитать события типа {Type} — HTTP {Status}",
+                    domainPrefix, type, (int)resp.StatusCode);
+                return cleaned;
+            }
+
+            var body = await resp.Content.ReadAsStringAsync(ct);
+            var existing = JsonSerializer.Deserialize<List<ExistingEvent>>(body, ReadOpts);
+            if (existing is null) return cleaned;
+
+            var prefix = $"https://vk.com/{domainPrefix}";
+            var today = DateTime.Today;
+
+            var pastGroups = existing
+                .Where(e => e.SourceUrl?.StartsWith(prefix, StringComparison.Ordinal) == true)
+                .GroupBy(e => e.SourceUrl!, StringComparer.Ordinal)
+                .Where(g => g.All(e => e.Start < today))
+                .Select(g => g.Key);
+
+            foreach (var url in pastGroups)
+            {
+                try
+                {
+                    using var del = await _apiHttp.DeleteAsync(
+                        $"/events/by-source?sourceUrl={Uri.EscapeDataString(url)}", ct);
+
+                    if (del.IsSuccessStatusCode)
+                    {
+                        cleaned++;
+                        _logger.LogInformation("   🧹 Удалена прошедшая группа: {SourceUrl}", url);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("   ⚠️ Удаление {SourceUrl} — HTTP {Status}", url, (int)del.StatusCode);
+                    }
+                }
+                catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException)
+                {
+                    _logger.LogWarning(ex, "   ⚡ Не удалось удалить группу {SourceUrl}", url);
+                }
+            }
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException or JsonException)
+        {
+            _logger.LogWarning(ex, "VK {Domain}: уборка прошедших событий прервана", domainPrefix);
+        }
+
+        return cleaned;
     }
 }

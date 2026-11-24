@@ -164,8 +164,10 @@ public class SmuziQuizScraperService(
 
         // Источник отдаёт только предстоящие игры, а список отсортирован по возрастанию даты,
         // поэтому монотонный счёт месяцев по порядку карточек даёт корректный год.
+        // Якорем служит текущий месяц: первая же карточка с меньшим месяцем — это уже следующий
+        // год (декабрь → январь), иначе январь, опубликованный в декабре, ушёл бы в прошлое.
         var anchorYear = now.Year;
-        var previousMonth = 0;
+        var previousMonth = now.Month;
         var skippedPast = 0;
 
         foreach (var product in products)
@@ -199,7 +201,7 @@ public class SmuziQuizScraperService(
             }
 
             // Месяц пошёл назад — значит, карточки перешли на следующий год
-            if (previousMonth != 0 && month.Value < previousMonth)
+            if (month.Value < previousMonth)
                 anchorYear++;
             previousMonth = month.Value;
 

@@ -70,7 +70,8 @@ public class SmuziQuizJob : IJob
                 {
                     var payload = new
                     {
-                        summary = game.Title,
+                        // Префикс источника, как у «ВАУ КВИЗ:», — чтобы тип был виден в заголовке события
+                        summary = $"Смузи: {game.Title}",
                         description = game.Description,
                         address = string.IsNullOrWhiteSpace(game.Venue)
                             ? game.Address
