@@ -86,14 +86,15 @@
                 .WithCronSchedule("0 0 9 * * ?")
                 .WithDescription("Ежедневно в 9:00 — проверка расписания Мозгобойни"));
 
-            // ── VK Quiz (image-based) — отложено до появления Vision API
-            // var vkQuizKey = new JobKey("VkQuizJob");
-            // q.AddJob<VkQuizJob>(opts => opts.WithIdentity(vkQuizKey));
-            // q.AddTrigger(opts => opts
-            //     .ForJob(vkQuizKey)
-            //     .WithIdentity("VkQuizTrigger")
-            //     .WithCronSchedule("0 0 9 * * ?")
-            //     .WithDescription("Пн,Чт в 10:00 — сканирование VK-расписаний через DeepSeek"));
+            // ── VK image-based schedules parsed via DeepSeek Vision ──
+            var vkScheduleKey = new JobKey("VkImageScheduleJob");
+            q.AddJob<VkImageScheduleJob>(opts => opts.WithIdentity(vkScheduleKey));
+
+            q.AddTrigger(opts => opts
+                .ForJob(vkScheduleKey)
+                .WithIdentity("VkImageScheduleTrigger")
+                .WithCronSchedule("0 0 9 * * ?")
+                .WithDescription("Ежедневно в 9:00 — сканирование VK-расписаний через DeepSeek"));
         });
 
         services.AddQuartzHostedService(opts =>
@@ -117,7 +118,6 @@ var scheduler = await schedulerFactory.GetScheduler();
 await scheduler.TriggerJob(new JobKey("GomelMassSkatingJob"));
 await scheduler.TriggerJob(new JobKey("WowQuizJob"));
 await scheduler.TriggerJob(new JobKey("MozgoBoynyaJob"));
-// VkQuizJob not triggered on startup — requires VK + DeepSeek tokens
-// await scheduler.TriggerJob(new JobKey("VkQuizJob"));
+await scheduler.TriggerJob(new JobKey("VkImageScheduleJob"));
 
 await host.RunAsync();

@@ -5,14 +5,17 @@ using System.Text.Json.Serialization;
 namespace Infocal.Scraper;
 
 /// <summary>
-/// Scrapes quiz schedules from VK pages by analyzing post images via DeepSeek Vision.
+/// Generic scraper for schedules published as images on VK pages.
+/// Downloads each post image and extracts the schedule via DeepSeek Vision
+/// (deepseek-flash), then pushes events to the Calendar API.
+/// Add a new source by extending <see cref="Sources"/>.
 /// </summary>
-public class VkQuizJob : IJob
+public class VkImageScheduleJob : IJob
 {
     private readonly VkScraperService _vk;
     private readonly VisionService _vision;
     private readonly HttpClient _apiHttp;
-    private readonly ILogger<VkQuizJob> _logger;
+    private readonly ILogger<VkImageScheduleJob> _logger;
 
     private static readonly JsonSerializerOptions JsonOpts = new()
     {
@@ -20,15 +23,18 @@ public class VkQuizJob : IJob
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 
-    // VK domains to scrape
-    private static readonly (string Domain, string Category, string City)[] Sources =
+    private sealed record VkSource(
+        string Domain, string Category, string City, string Type, string TypeDescription);
+
+    // VK pages that publish their schedule as images
+    private static readonly VkSource[] Sources =
     [
-        ("mzgb_gom", "Квиз", "Гомель"),
+        new("mindstorm_gomel", "quiz", "Гомель", "mindstorm", "MindStorm"),
     ];
 
-    public VkQuizJob(
+    public VkImageScheduleJob(
         VkScraperService vk, VisionService vision,
-        IHttpClientFactory httpFactory, ILogger<VkQuizJob> logger)
+        IHttpClientFactory httpFactory, ILogger<VkImageScheduleJob> logger)
     {
         _vk = vk;
         _vision = vision;
@@ -38,27 +44,27 @@ public class VkQuizJob : IJob
 
     public async Task Execute(IJobExecutionContext context)
     {
-        foreach (var (domain, category, city) in Sources)
+        foreach (var source in Sources)
         {
-            _logger.LogInformation("📸 Сканирую VK {Domain}...", domain);
+            _logger.LogInformation("📸 Сканирую VK {Domain}...", source.Domain);
 
             try
             {
-                var posts = await _vk.GetPhotoPostsAsync(domain, count: 10, context.CancellationToken);
+                var posts = await _vk.GetPhotoPostsAsync(source.Domain, count: 10, context.CancellationToken);
                 if (posts.Count == 0)
                 {
-                    _logger.LogInformation("⏳ Нет постов с фото в {Domain}", domain);
+                    _logger.LogInformation("⏳ Нет постов с фото в {Domain}", source.Domain);
                     continue;
                 }
 
-                var sourceUrl = $"https://vk.com/{domain}";
+                var sourceUrl = $"https://vk.com/{source.Domain}";
                 int pushed = 0, failed = 0, skipped = 0;
 
                 foreach (var post in posts)
                 {
                     if (post._bestPhotoUrl is null) continue;
 
-                    // Step 1: Ask DeepSeek if this is a schedule
+                    // Step 1: Ask DeepSeek Vision if this is a schedule
                     var extracted = await _vision.AnalyzeImageAsync(
                         post._bestPhotoUrl, post.Text, context.CancellationToken);
 
@@ -91,15 +97,21 @@ public class VkQuizJob : IJob
                                 continue;
                             }
 
+                            var title = string.IsNullOrWhiteSpace(game.Title)
+                                ? source.TypeDescription
+                                : game.Title;
+
                             var payload = new
                             {
-                                description = game.Title ?? "Квиз",
-                                location = game.Venue ?? "",
+                                summary = title,
+                                description = game.Venue ?? "",
                                 address = game.Address ?? "",
-                                city = extracted.City ?? city,
+                                city = string.IsNullOrWhiteSpace(extracted.City) ? source.City : extracted.City,
+                                type = source.Type,
+                                typeDescription = source.TypeDescription,
                                 start = start,
                                 end = start.AddHours(2),
-                                category = category,
+                                category = source.Category,
                                 sourceUrl = postSourceUrl,
                                 isAllDay = false
                             };
@@ -111,7 +123,7 @@ public class VkQuizJob : IJob
                             if (resp.IsSuccessStatusCode)
                             {
                                 pushed++;
-                                _logger.LogInformation("   ✅ {Date:dd.MM HH:mm} {Title}", start, game.Title);
+                                _logger.LogInformation("   ✅ {Date:dd.MM HH:mm} {Title}", start, title);
                             }
                             else
                             {
@@ -130,11 +142,11 @@ public class VkQuizJob : IJob
                 }
 
                 _logger.LogInformation("🎉 VK {Domain}: {Pushed} отправлено, {Failed} ошибок, {Skipped} пропущено",
-                    domain, pushed, failed, skipped);
+                    source.Domain, pushed, failed, skipped);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Ошибка обработки VK {Domain}", domain);
+                _logger.LogError(ex, "Ошибка обработки VK {Domain}", source.Domain);
             }
         }
     }

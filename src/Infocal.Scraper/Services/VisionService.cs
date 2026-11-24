@@ -5,15 +5,15 @@ using System.Text.Json.Serialization;
 namespace Infocal.Scraper.Services;
 
 /// <summary>
-/// Sends images to a vision-capable LLM (OpenAI, DeepSeek, or compatible API)
-/// to extract quiz schedule information from images.
-/// Supports any OpenAI-compatible endpoint.
+/// Sends images to a vision-capable LLM to extract quiz schedule information.
+/// Defaults to DeepSeek Vision (deepseek-flash), but works with any
+/// OpenAI-compatible endpoint (OpenAI, DeepSeek, etc.).
 /// </summary>
 public class VisionService(HttpClient http, IConfiguration config, ILogger<VisionService> logger)
 {
     private readonly string _token = config["Vision:ApiKey"] ?? throw new InvalidOperationException("Vision:ApiKey not configured");
-    private readonly string _model = config["Vision:Model"] ?? "gpt-4o-mini";
-    private readonly string _endpoint = config["Vision:Endpoint"] ?? "https://api.openai.com/v1/chat/completions";
+    private readonly string _model = config["Vision:Model"] ?? "deepseek-flash";
+    private readonly string _endpoint = config["Vision:Endpoint"] ?? "https://api.deepseek.com/chat/completions";
 
     private static readonly JsonSerializerOptions JsonOpts = new()
     {
