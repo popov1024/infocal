@@ -24,7 +24,8 @@ public static class DbSeed
         ("ice-palace", "Ледовый дворец", "mass-skating"),
         ("wow-quiz", "ВАУ КВИЗ", "quiz"),
         ("mozgoboynya", "Мозгобойня", "quiz"),
-        ("mindstorm", "MindStorm", "quiz")
+        ("mindstorm", "MindStorm", "quiz"),
+        ("smuzi", "Смузи", "quiz")
     ];
 
     public static async Task InitializeAsync(AppDbContext db)

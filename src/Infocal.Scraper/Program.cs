@@ -1,7 +1,17 @@
-﻿var host = Host.CreateDefaultBuilder(args)
+﻿// ── Гейт выборочного запуска джобов: ScrapeSchedule:OnlyJobs (пусто = все джобы) ──
+// Значение читается в ConfigureServices, используется и при регистрации джобов, и при стартовом триггере
+string[] onlyJobs = [];
+
+bool JobEnabled(string key) =>
+    onlyJobs.Length == 0 || onlyJobs.Contains(key, StringComparer.OrdinalIgnoreCase);
+
+var host = Host.CreateDefaultBuilder(args)
     .ConfigureServices((ctx, services) =>
     {
         var cfg = ctx.Configuration;
+
+        onlyJobs = (cfg["ScrapeSchedule:OnlyJobs"] ?? "")
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
         // ── HTTP clients ──
         services.AddHttpClient("CalendarApi", client =>
@@ -44,6 +54,13 @@
             client.Timeout = TimeSpan.FromSeconds(30);
         });
 
+        services.AddHttpClient<SmuziQuizScraperService>(client =>
+        {
+            // Адреса страницы и API берутся из конфига SmuziQuiz
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("Infocal.Scraper/1.0");
+            client.Timeout = TimeSpan.FromSeconds(30);
+        });
+
         // ── Quartz ──
         var aggressiveCron = cfg["ScrapeSchedule:AggressiveCron"] ?? "0 */30 * ? * SAT,SUN,MON";
         var lazyCron = cfg["ScrapeSchedule:LazyCron"] ?? "0 0 10 ? * TUE,WED,THU,FRI";
@@ -51,50 +68,75 @@
         services.AddQuartz(q =>
         {
             // ── Gomel Mass Skating ──
-            var skatingKey = new JobKey("GomelMassSkatingJob");
-            q.AddJob<GomelMassSkatingJob>(opts => opts.WithIdentity(skatingKey));
+            if (JobEnabled("GomelMassSkatingJob"))
+            {
+                var skatingKey = new JobKey("GomelMassSkatingJob");
+                q.AddJob<GomelMassSkatingJob>(opts => opts.WithIdentity(skatingKey));
 
-            q.AddTrigger(opts => opts
-                .ForJob(skatingKey)
-                .WithIdentity("GomelAggressiveTrigger")
-                .WithCronSchedule(aggressiveCron)
-                .WithDescription("Сб–Пн: каждые 30 мин — ждём новое расписание"));
+                q.AddTrigger(opts => opts
+                    .ForJob(skatingKey)
+                    .WithIdentity("GomelAggressiveTrigger")
+                    .WithCronSchedule(aggressiveCron)
+                    .WithDescription("Сб–Пн: каждые 30 мин — ждём новое расписание"));
 
-            q.AddTrigger(opts => opts
-                .ForJob(skatingKey)
-                .WithIdentity("GomelLazyTrigger")
-                .WithCronSchedule(lazyCron)
-                .WithDescription("Вт–Пт: раз в день — проверка на случай изменений"));
+                q.AddTrigger(opts => opts
+                    .ForJob(skatingKey)
+                    .WithIdentity("GomelLazyTrigger")
+                    .WithCronSchedule(lazyCron)
+                    .WithDescription("Вт–Пт: раз в день — проверка на случай изменений"));
+            }
 
             // ── WowQuiz ──
-            var quizKey = new JobKey("WowQuizJob");
-            q.AddJob<WowQuizJob>(opts => opts.WithIdentity(quizKey));
+            if (JobEnabled("WowQuizJob"))
+            {
+                var quizKey = new JobKey("WowQuizJob");
+                q.AddJob<WowQuizJob>(opts => opts.WithIdentity(quizKey));
 
-            q.AddTrigger(opts => opts
-                .ForJob(quizKey)
-                .WithIdentity("WowQuizDailyTrigger")
-                .WithCronSchedule("0 0 9 * * ?")
-                .WithDescription("Ежедневно в 9:00 — проверка расписания квизов"));
+                q.AddTrigger(opts => opts
+                    .ForJob(quizKey)
+                    .WithIdentity("WowQuizDailyTrigger")
+                    .WithCronSchedule("0 0 9 * * ?")
+                    .WithDescription("Ежедневно в 9:00 — проверка расписания квизов"));
+            }
+
+            // ── Смузи ──
+            if (JobEnabled("SmuziQuizJob"))
+            {
+                var smuziKey = new JobKey("SmuziQuizJob");
+                q.AddJob<SmuziQuizJob>(opts => opts.WithIdentity(smuziKey));
+
+                q.AddTrigger(opts => opts
+                    .ForJob(smuziKey)
+                    .WithIdentity("SmuziQuizDailyTrigger")
+                    .WithCronSchedule("0 0 9 * * ?")
+                    .WithDescription("Ежедневно в 9:00 — проверка расписания квизов Смузи"));
+            }
 
             // ── MozgoBoynya ──
-            var mzgbKey = new JobKey("MozgoBoynyaJob");
-            q.AddJob<MozgoBoynyaJob>(opts => opts.WithIdentity(mzgbKey));
+            if (JobEnabled("MozgoBoynyaJob"))
+            {
+                var mzgbKey = new JobKey("MozgoBoynyaJob");
+                q.AddJob<MozgoBoynyaJob>(opts => opts.WithIdentity(mzgbKey));
 
-            q.AddTrigger(opts => opts
-                .ForJob(mzgbKey)
-                .WithIdentity("MozgoBoynyaDailyTrigger")
-                .WithCronSchedule("0 0 9 * * ?")
-                .WithDescription("Ежедневно в 9:00 — проверка расписания Мозгобойни"));
+                q.AddTrigger(opts => opts
+                    .ForJob(mzgbKey)
+                    .WithIdentity("MozgoBoynyaDailyTrigger")
+                    .WithCronSchedule("0 0 9 * * ?")
+                    .WithDescription("Ежедневно в 9:00 — проверка расписания Мозгобойни"));
+            }
 
             // ── VK image-based schedules parsed via DeepSeek Vision ──
-            var vkScheduleKey = new JobKey("VkImageScheduleJob");
-            q.AddJob<VkImageScheduleJob>(opts => opts.WithIdentity(vkScheduleKey));
+            if (JobEnabled("VkImageScheduleJob"))
+            {
+                var vkScheduleKey = new JobKey("VkImageScheduleJob");
+                q.AddJob<VkImageScheduleJob>(opts => opts.WithIdentity(vkScheduleKey));
 
-            q.AddTrigger(opts => opts
-                .ForJob(vkScheduleKey)
-                .WithIdentity("VkImageScheduleTrigger")
-                .WithCronSchedule("0 0 9 * * ?")
-                .WithDescription("Ежедневно в 9:00 — сканирование VK-расписаний через DeepSeek"));
+                q.AddTrigger(opts => opts
+                    .ForJob(vkScheduleKey)
+                    .WithIdentity("VkImageScheduleTrigger")
+                    .WithCronSchedule("0 0 9 * * ?")
+                    .WithDescription("Ежедневно в 9:00 — сканирование VK-расписаний через DeepSeek"));
+            }
         });
 
         services.AddQuartzHostedService(opts =>
@@ -115,9 +157,15 @@ logger.LogInformation("   💤 Обычный режим:     {Cron}", config["S
 // ── Первый запуск сразу при старте ──
 var schedulerFactory = host.Services.GetRequiredService<ISchedulerFactory>();
 var scheduler = await schedulerFactory.GetScheduler();
-await scheduler.TriggerJob(new JobKey("GomelMassSkatingJob"));
-await scheduler.TriggerJob(new JobKey("WowQuizJob"));
-await scheduler.TriggerJob(new JobKey("MozgoBoynyaJob"));
-await scheduler.TriggerJob(new JobKey("VkImageScheduleJob"));
+if (JobEnabled("GomelMassSkatingJob"))
+    await scheduler.TriggerJob(new JobKey("GomelMassSkatingJob"));
+if (JobEnabled("WowQuizJob"))
+    await scheduler.TriggerJob(new JobKey("WowQuizJob"));
+if (JobEnabled("SmuziQuizJob"))
+    await scheduler.TriggerJob(new JobKey("SmuziQuizJob"));
+if (JobEnabled("MozgoBoynyaJob"))
+    await scheduler.TriggerJob(new JobKey("MozgoBoynyaJob"));
+if (JobEnabled("VkImageScheduleJob"))
+    await scheduler.TriggerJob(new JobKey("VkImageScheduleJob"));
 
 await host.RunAsync();

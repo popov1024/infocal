@@ -57,12 +57,27 @@ SQLite, файл `calendar.db` в volume `calendar-data`. Схема созда�
 ## Scraper
 
 Quartz-джобы: `GomelMassSkatingJob` (агрессивный и ленивый cron из `ScrapeSchedule:*`),
-`WowQuizJob`, `MozgoBoynyaJob`, `VkImageScheduleJob` (ежедневно 9:00). Все четыре
-принудительно триггерятся при старте воркера.
+`WowQuizJob`, `MozgoBoynyaJob`, `SmuziQuizJob`, `VkImageScheduleJob` (ежедневно 9:00).
+Все пять принудительно триггерятся при старте воркера.
 
 Каждый источник — отдельный `*ScraperService` + `IJob`, результат мапится в payload и
 уходит POST-ом в Calendar. Новый источник расписаний-картинок VK добавляется одной строкой
 в статический массив `VkImageScheduleJob.Sources`.
+
+`SmuziQuizJob` — единственный бесплатный источник без LLM: расписание квизов «Смузи»
+(Гомель) берётся из машиночитаемого каталога сайта, а не из VK. Схема: HTML
+`SmuziQuiz:SchedulePageUrl` (`/games`) → из него регуляркой `storepart:'…'` и `recid:'…'` →
+`GET {SmuziQuiz:StoreApiUrl}/api/getproductslist/?storepartuid=…&recid=…&size=…&slice=…`
+(публичный, но недокументированный API Tilda-магазина). Года в данных нет, список
+отсортирован по возрастанию — год выводится монотонным счётом месяцев. `SourceUrl`
+пер-событийный (`…/admin/tproduct/<uid>-<slug>`), поэтому синхронизация двухфазная:
+прочитать `/events?type=smuzi`, удалить устаревшие и перенесённые по `by-source`, затем
+upsert. Если страница/API не разобрались или карточек 0 — джоб **ничего не удаляет**.
+Соответствие полей: `title` → summary, `descr` → description, площадка + адрес из
+`characteristics`/`json_options` → address (в Calendar нет поля venue).
+
+Локальный прогон одного источника: `ScrapeSchedule:OnlyJobs` (CSV JobKey, пусто = все).
+Регистрирует и триггерит только перечисленные джобы, остальные не создаются вовсе.
 
 `VisionService` — единственная платная внешняя зависимость: шлёт картинку в DeepSeek
 (`Vision:Endpoint`, `Vision:Model` = `deepseek-flash`, `Vision:ApiKey`), ждёт строгий JSON
@@ -91,5 +106,6 @@ Quartz-джобы: `GomelMassSkatingJob` (агрессивный и ленивы
 - `.secret` не трогай вообще.
 - Переход `EnsureCreated` → EF-миграции, смена схемы, смена портов или хоста — только после согласования.
 - Не запускай Scraper по всем источникам ради проверки: это удары по чужим сайтам и платные
-  вызовы Vision. Проверяй на одном источнике или на сохранённом ответе.
+  вызовы Vision. Проверяй на одном источнике или на сохранённом ответе. Для этого есть гейт:
+  `ScrapeSchedule__OnlyJobs=SmuziQuizJob dotnet run --project src/Infocal.Scraper`.
 - Если задача требует правки в двух и более сервисах — сначала опиши контракт, потом код.
